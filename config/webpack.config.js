@@ -27,6 +27,13 @@ module.exports = {
     ],
   },
   plugins: [
+    new ModuleFederationPlugin({
+      name: "ptsAnchorSetup",
+      filename: "remoteEntry.js",
+      exposes: {
+        "./PTSAnchorSetup": "./src/bootstrap.js",
+      },
+    }),
     new HtmlWebpackPlugin({
       template: "./public/index.html",
     }),
