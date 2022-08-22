@@ -98,26 +98,29 @@ const generateGrid = (cellSize, anchorPos) => {
   return tempcells.sort((a, b) => a.distance - b.distance);
 };
 
-const generateLevels = (cellSize, anchorPos) => {
+const generateLevels = ({ cellSize, anchorPos }) => {
   let arr = [];
-
   let x0 = anchorPos.x,
     y0 = anchorPos.y;
+  let radius = anchorPos.radius;
   let x = x0 - cellSize,
     y = y0 - cellSize;
   let level = 0;
 
-  function interPolatePoints(point, circle) {
+  console.log(`x0: ${x0} y0: ${y0}`);
+
+  function interPolatePoints(point, anchorPos) {
     let x = point.x,
       y = point.y;
     let points = [];
+    console.log(`x: ${x} y: ${y}`);
 
     //top
     for (let i = x; i < x + 2 * (x0 - x); i += cellSize) {
       //check if point lies in circle or not
       //if no increment x by cell size
       if (i <= x0) {
-        if (checkIsPointInCircle(i, y, circle.radius)) {
+        if (checkIsPointInCircle(i, y)) {
           points.push({
             x: i,
             y: y,
@@ -125,7 +128,7 @@ const generateLevels = (cellSize, anchorPos) => {
           });
         }
       } else {
-        if (checkIsPointInCircle(cellSize + i, y, circle.radius)) {
+        if (checkIsPointInCircle(cellSize + i, y)) {
           points.push({
             x: i,
             y: y,
@@ -142,7 +145,7 @@ const generateLevels = (cellSize, anchorPos) => {
       //check if point lies in circle or not
       //if no decrement x b cell size
       if (i <= y0) {
-        if (checkIsPointInCircle(x + 2 * (x0 - x), i, circle.radius)) {
+        if (checkIsPointInCircle(x + 2 * (x0 - x), i)) {
           points.push({
             x: x + 2 * (x0 - x) - cellSize,
             y: i,
@@ -152,9 +155,7 @@ const generateLevels = (cellSize, anchorPos) => {
           });
         }
       } else {
-        if (
-          checkIsPointInCircle(x + 2 * (x0 - x), i + cellSize, circle.radius)
-        ) {
+        if (checkIsPointInCircle(x + 2 * (x0 - x), i + cellSize)) {
           points.push({
             x: x + 2 * (x0 - x) - cellSize,
             y: i,
@@ -169,11 +170,16 @@ const generateLevels = (cellSize, anchorPos) => {
     // //bottom
     for (let i = x + 2 * (x0 - x) - cellSize; i >= x; i -= cellSize) {
       //check if point lies in circle or not
-      //if no decrement x b cell size
+      // if no decrement x b cell size
       if (i > x0) {
-        if (
-          checkIsPointInCircle(i + cellSize, y + 2 * (y0 - y), circle.radius)
-        ) {
+        console.log("greater");
+        console.log(
+          "distance",
+          Math.sqrt(
+            Math.pow(x0 - i + cellSize, 2) + Math.pow(y0 - y + 2 * (y0 - y), 2)
+          )
+        );
+        if (checkIsPointInCircle(i + cellSize, y + 2 * (y0 - y))) {
           points.push({
             x: i,
             y: y + 2 * (y0 - y) - cellSize,
@@ -183,7 +189,15 @@ const generateLevels = (cellSize, anchorPos) => {
           });
         }
       } else {
-        if (checkIsPointInCircle(i, y + 2 * (y0 - y), circle.radius)) {
+        console.log("smaller");
+        console.log(
+          "distance",
+          Math.sqrt(Math.pow(x0 - i, 2) + Math.pow(y0 - y + 2 * (y0 - y), 2)) +
+            " " +
+            checkIsPointInCircle(i, y + 2 * (y0 - y))
+        );
+        console.log(checkIsPointInCircle(i, y + 2 * (y0 - y)));
+        if (checkIsPointInCircle(i, y + 2 * (y0 - y))) {
           points.push({
             x: i,
             y: y + 2 * (y0 - y) - cellSize,
@@ -204,7 +218,7 @@ const generateLevels = (cellSize, anchorPos) => {
       //check if point lies in circle or not
       //if no decrement x b cell size
       if (i <= y0) {
-        if (checkIsPointInCircle(x, i, circle.radius)) {
+        if (checkIsPointInCircle(x, i)) {
           points.push({
             x: x,
             y: i,
@@ -212,7 +226,7 @@ const generateLevels = (cellSize, anchorPos) => {
           });
         }
       } else {
-        if (checkIsPointInCircle(x, i + cellSize, circle.radius)) {
+        if (checkIsPointInCircle(x, i + cellSize)) {
           points.push({
             x: x,
             y: i,
@@ -227,16 +241,16 @@ const generateLevels = (cellSize, anchorPos) => {
     return points.sort((a, b) => a.distance - b.distance);
   }
 
-  function checkIsPointInCircle(a, b, radius) {
-    return Math.sqrt(Math.pow(x0 - a, 2) + Math.pow(x0 - b, 2)) <= radius;
+  function checkIsPointInCircle(a, b) {
+    console.log("check", Math.sqrt(Math.pow(a - x0, 2) + Math.pow(b - x0, 2)));
+    return (
+      Math.sqrt(Math.pow(a - x0, 2) + Math.pow(b - y0, 2)) <=
+      Math.sqrt(Math.pow(radius, 2) + Math.pow(cellSize, 2))
+    );
   }
 
-  while (
-    Math.sqrt(Math.pow(x0 - x, 2)) <= anchorPos.radius &&
-    Math.sqrt(Math.pow(x0 - y, 2)) <= anchorPos.radius
-  ) {
-    let locations = interPolatePoints({ x: x, y: y }, anchorPos);
-    arr[level] = locations;
+  while (x0 - x <= radius && y0 - y <= radius) {
+    arr[level] = interPolatePoints({ x: x, y: y }, anchorPos);
     x = x - cellSize;
     y = y - cellSize;
     level++;
@@ -247,36 +261,44 @@ const generateLevels = (cellSize, anchorPos) => {
 };
 
 const Grid = ({ cellSize, anchorPos }) => {
-  let [cells, setCells] = useState([]);
+  const [cells, setCells] = useState([[{ x: NaN, y: NaN, distance: NaN }]]);
+  const [isHover, setIsHover] = useState(false);
 
   useEffect(() => {
-    setCells(generateLevels(cellSize, anchorPos));
+    setCells(generateLevels({ cellSize, anchorPos }));
   }, []);
 
   let k = 0;
 
   return (
     <>
-      {cells.map((cell, i) =>
-        cell?.map((level, j) => (
-          <Group key={`group${i}${j}`}>
+      {cells.map((level, i) =>
+        level.map((cell, j) => (
+          <Group
+            key={`group${i}${j}`}
+            onMouseOver={(e) => {
+              console.log(e);
+              setIsHover(true);
+            }}
+            fill={isHover ? "black" : "transparent"}
+            opacity={1}
+            onMouseOut={(e) => {
+              console.log(e);
+              setIsHover(false);
+            }}
+          >
             <Rect
               key={`tile${k}`}
-              x={level.x}
-              y={level.y}
+              x={cell.x}
+              y={cell.y}
               width={cellSize}
               height={cellSize}
               stroke="black"
               strokeWidth={0.5}
               fill="yellow"
-              opacity={0.5}
+              opacity={0.3}
             />
-            <Text
-              key={`text${i}`}
-              text={`${k++}`}
-              x={level.x}
-              y={level.y}
-            ></Text>
+            <Text key={`text${i}`} text={`${k++}`} x={cell.x} y={cell.y}></Text>
           </Group>
         ))
       )}
@@ -287,7 +309,7 @@ const Grid = ({ cellSize, anchorPos }) => {
 const App = () => {
   const cellSize = 50;
   const anchorPos = [
-    { x: 300, y: 300, radius: 300 },
+    { x: 500, y: 300, radius: 300 },
     // { x: 600, y: 200, radius: 200 },
     // { x: 1000, y: 300, radius: 200 },
   ];
@@ -296,9 +318,10 @@ const App = () => {
       <div>
         <Stage width={window.innerWidth} height={window.innerHeight}>
           <Layer>
-            {anchorPos.map((anchorPos) => (
+            {anchorPos.map((anchorPos, i) => (
               <>
                 <Circle
+                  key={`radius${i}`}
                   x={anchorPos.x}
                   y={anchorPos.y}
                   radius={anchorPos.radius}
@@ -306,6 +329,7 @@ const App = () => {
                   opacity={0.5}
                 />
                 <Circle
+                  key={`anchor${i}`}
                   x={anchorPos.x}
                   y={anchorPos.y}
                   radius={10}
