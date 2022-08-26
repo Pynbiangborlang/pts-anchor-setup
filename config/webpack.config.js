@@ -24,6 +24,14 @@ module.exports = {
           },
         },
       },
+      {
+        test: /\.css$/i,
+        use: ["style-loader", "css-loader"],
+      },
+      {
+        test: /\.(png|jpg|gif)$/i,
+        type: "asset/resource",
+      },
     ],
   },
   plugins: [
@@ -31,7 +39,7 @@ module.exports = {
       name: "ptsAnchorSetup",
       filename: "remoteEntry.js",
       exposes: {
-        "./PTSAnchorSetup": "./src/bootstrap.js",
+        "./PTSAnchorSetup": "./src/bootstrap",
       },
     }),
     new HtmlWebpackPlugin({

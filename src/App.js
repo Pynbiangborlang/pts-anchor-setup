@@ -1,6 +1,10 @@
 import axios from "axios";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Stage, Layer, Rect, Circle, Text, Group } from "react-konva";
+import { Html } from "react-konva-utils";
+import Popup, { PopupBody, PopupHeader, PopupItem } from "./components/Popup";
+import ToolsBar from "./components/ToolsBar";
+import styles from "./styles.css";
 
 const generateLevels = ({ cellSize, anchorPos }) => {
   let arr = [];
@@ -21,6 +25,7 @@ const generateLevels = ({ cellSize, anchorPos }) => {
       if (i <= x0) {
         if (checkIsPointInCircle(i, y)) {
           points.push({
+            tokenId: "",
             x: i,
             y: y,
             distance: Math.sqrt(Math.pow(x0 - i, 2) + Math.pow(y0 - y, 2)),
@@ -29,6 +34,7 @@ const generateLevels = ({ cellSize, anchorPos }) => {
       } else {
         if (checkIsPointInCircle(cellSize + i, y)) {
           points.push({
+            tokenId: "",
             x: i,
             y: y,
             distance: Math.sqrt(
@@ -44,6 +50,7 @@ const generateLevels = ({ cellSize, anchorPos }) => {
       if (i <= y0) {
         if (checkIsPointInCircle(x + 2 * (x0 - x), i)) {
           points.push({
+            tokenId: "",
             x: x + 2 * (x0 - x) - cellSize,
             y: i,
             distance: Math.sqrt(
@@ -54,6 +61,7 @@ const generateLevels = ({ cellSize, anchorPos }) => {
       } else {
         if (checkIsPointInCircle(x + 2 * (x0 - x), i + cellSize)) {
           points.push({
+            tokenId: "",
             x: x + 2 * (x0 - x) - cellSize,
             y: i,
             distance: Math.sqrt(
@@ -69,6 +77,7 @@ const generateLevels = ({ cellSize, anchorPos }) => {
       if (i > x0) {
         if (checkIsPointInCircle(i + cellSize, y + 2 * (y0 - y))) {
           points.push({
+            tokenId: "",
             x: i,
             y: y + 2 * (y0 - y) - cellSize,
             distance: Math.sqrt(
@@ -79,6 +88,7 @@ const generateLevels = ({ cellSize, anchorPos }) => {
       } else {
         if (checkIsPointInCircle(i, y + 2 * (y0 - y))) {
           points.push({
+            tokenId: "",
             x: i,
             y: y + 2 * (y0 - y) - cellSize,
             distance: Math.sqrt(
@@ -100,6 +110,7 @@ const generateLevels = ({ cellSize, anchorPos }) => {
       if (i <= y0) {
         if (checkIsPointInCircle(x, i)) {
           points.push({
+            tokenId: "",
             x: x,
             y: i,
             distance: Math.sqrt(Math.pow(x0 - x, 2) + Math.pow(y0 - i, 2)),
@@ -108,6 +119,7 @@ const generateLevels = ({ cellSize, anchorPos }) => {
       } else {
         if (checkIsPointInCircle(x, i + cellSize)) {
           points.push({
+            tokenId: "",
             x: x,
             y: i,
             distance: Math.sqrt(
@@ -134,26 +146,18 @@ const generateLevels = ({ cellSize, anchorPos }) => {
     y = y - cellSize;
     level++;
   }
-
-  console.log(arr);
   return arr;
 };
 
 const Grid = ({ cellSize, anchorPos }) => {
-  const [cells, setCells] = useState([[{}]]);
   let k = 0;
-  useEffect(() => {
-    setCells(generateLevels({ cellSize, anchorPos }));
-  }, []);
-
   return (
     <>
-      {cells.map((level, i) => {
+      {anchorPos?.location.map((level, i) => {
         return (
           <Group
             key={`${anchorPos.id}_level${i}`}
             onMouseOver={(e) => {
-              console.log(e);
               e.target.parent?.children.map((child) => {
                 if (child.className === "Rect") {
                   child.setAttr("fill", "green");
@@ -170,9 +174,9 @@ const Grid = ({ cellSize, anchorPos }) => {
             }}
           >
             {level.map((cell, j) => (
-              <>
+              <React.Fragment key={`rect${anchorPos.id}_${i}_${j}`}>
                 <Rect
-                  key={`${anchorPos.id}_${i}_tile${j}_${cell.x}_${cell.y}`}
+                  // key={`rect${anchorPos.id}_${i}_${j}`}
                   x={cell.x}
                   y={cell.y}
                   width={cellSize}
@@ -183,12 +187,12 @@ const Grid = ({ cellSize, anchorPos }) => {
                   opacity={0.3}
                 />
                 <Text
-                  key={`${anchorPos.id}_${i}_text${cell.x}_${cell.y}`}
+                  // key={`text${anchorPos.id}_${i}_${j}`}
                   text={`${k++}`}
                   x={cell.x}
                   y={cell.y}
                 ></Text>
-              </>
+              </React.Fragment>
             ))}
           </Group>
         );
@@ -199,40 +203,229 @@ const Grid = ({ cellSize, anchorPos }) => {
 
 const App = () => {
   const cellSize = 30;
-  const anchorPos = [
-    { id: 1, x: 700, y: 400, radius: 210 },
-    { id: 2, x: 300, y: 210, radius: 210 },
-    { id: 3, x: 1200, y: 200, radius: 210 },
-  ];
+  const stageRef = useRef(null);
+  const stagePos = useRef({ x: 0, y: 0 });
+  const [isVisible, setIsVisible] = useState(false);
+  const [anchorsPos, setAnchorsPos] = useState([]);
+  const [draggedId, setDragedId] = useState(null);
+  const [isSelected, setIsSelected] = useState(false);
+  const [tooltip, setTooltip] = useState();
+
+  //listens when anchor is dropped in canvas
+  const handleDrop = (e) => {
+    e.preventDefault();
+    stageRef.current?.setPointersPositions(e);
+    let { x, y } = stageRef.current?.getPointersPositions()[0];
+
+    let anchorPos = {
+      id: Date.now(),
+      x: x - stagePos.current.x,
+      y: y - stagePos.current.y,
+      radius: 210,
+      location: [[{}]],
+      zone: "",
+      tokens: 0,
+      teams: 0,
+    };
+
+    anchorPos.location = [...generateLevels({ cellSize, anchorPos })];
+
+    setAnchorsPos((anchorsPos) => {
+      anchorsPos.push(anchorPos);
+      return [...anchorsPos];
+    });
+  };
+
+  //listens when anchor is drageed in canvas
+  const handleAnchorDrag = ({ e, anchorPos }) => {
+    setDragedId(null);
+
+    setAnchorsPos((currentAnchors) => {
+      currentAnchors.forEach((anchor) => {
+        if (anchor.id === anchorPos.id) {
+          anchor.x = e.target.attrs.x;
+          anchor.y = e.target.attrs.y;
+          let anchorPos = {
+            id: anchor.id,
+            x: e.target.attrs.x,
+            y: e.target.attrs.y,
+            radius: 210,
+          };
+          anchor.location = generateLevels({ cellSize, anchorPos });
+        }
+      });
+      console.log(currentAnchors);
+      return [...currentAnchors];
+    });
+  };
+
+  //listens when anchor is clicked
+  const handleAnchorClick = (e, anchor) => {
+    setIsSelected(!isSelected);
+    setTooltip({
+      x: e.target.attrs.x + 5,
+      y: e.target.attrs.y + 2,
+      object: anchor,
+    });
+  };
+
+  //listens when anchor property is changing
+  const handleAnchorChange = ({ anchorId, property, value }) => {
+    console.log(value);
+    console.log(anchorId);
+    setAnchorsPos((currentAnchorPos) => {
+      currentAnchorPos.map((anchor) => {
+        if (anchorId === anchor.id) {
+          if (property === "id") {
+            anchor.id = value;
+          } else if (property === "zone") {
+            anchor.zone = value;
+          } else if (property === "tokens") {
+            anchor.tokens = value;
+          } else if (property === "teams") {
+            anchor.teams = value;
+          }
+        }
+      });
+      return [...currentAnchorPos];
+    });
+  };
   return (
     <>
-      <div style={{ cursor: "grab" }}>
-        <Stage width={window.innerWidth} height={window.innerHeight} draggable>
+      <ToolsBar>
+        <button
+          className="pts-toolsbar-btn"
+          onClick={() => setIsVisible(!isVisible)}
+        >
+          {isVisible ? "hide" : "show"}
+        </button>
+        <button
+          className="pts-toolsbar-btn"
+          onClick={() => {
+            console.log(anchorsPos);
+          }}
+        >
+          Save
+        </button>
+      </ToolsBar>
+      <div
+        onDrop={handleDrop}
+        onDragOver={(e) => {
+          e.preventDefault();
+        }}
+      >
+        <Stage
+          draggable
+          width={window.innerWidth}
+          height={window.innerHeight}
+          ref={stageRef}
+          onDragEnd={(e) => {
+            stagePos.current.x = e.currentTarget.position().x;
+            stagePos.current.y = e.currentTarget.position().y;
+          }}
+        >
           <Layer>
-            {anchorPos.map((anchorPos, i) => (
-              <>
+            {anchorsPos?.map((anchorPos, i) => (
+              <React.Fragment key={`radius${i}`}>
+                {!(draggedId === anchorPos.id) && (
+                  // the radius coverage of the anchor
+                  <Circle
+                    x={anchorPos.x}
+                    y={anchorPos.y}
+                    radius={anchorPos.radius}
+                    fill="blue"
+                    opacity={0.1}
+                  />
+                )}
+                {/* representing anchor in canvas */}
                 <Circle
-                  key={`radius${i}`}
-                  x={anchorPos.x}
-                  y={anchorPos.y}
-                  radius={anchorPos.radius}
-                  fill="blue"
-                  opacity={0.1}
-                />
-                <Circle
-                  key={`anchor${i}`}
                   x={anchorPos.x}
                   y={anchorPos.y}
                   radius={10}
                   fill="red"
-                  opacity={1}
+                  opacity={0.7}
+                  draggable
+                  onDragStart={() => {
+                    setDragedId(anchorPos.id);
+                    setIsSelected(false);
+                  }}
+                  onDragEnd={(e) => handleAnchorDrag({ e, anchorPos })}
+                  onClick={(e) => handleAnchorClick(e, anchorPos)}
                 />
-              </>
+              </React.Fragment>
             ))}
-            {anchorPos.map((anchorPos) => (
-              <Grid cellSize={cellSize} anchorPos={anchorPos} />
-            ))}
+            {isVisible &&
+              anchorsPos?.map((anchorPos) => (
+                <Grid
+                  key={anchorPos.id}
+                  cellSize={cellSize}
+                  anchorPos={anchorPos}
+                />
+              ))}
           </Layer>
+          {isSelected && (
+            <Layer x={tooltip?.x} y={tooltip?.y}>
+              <Html>
+                <Popup className="sb-pts-popup">
+                  <PopupHeader className="sb-pts-popup-hdr" label="id">
+                    <PopupItem
+                      type="select"
+                      options={[0, 1, 2]}
+                      onChange={(newZone) =>
+                        handleAnchorChange({
+                          anchorId: tooltip.object.id,
+                          property: "zone",
+                          value: newZone,
+                        })
+                      }
+                    />
+                  </PopupHeader>
+                  <PopupBody>
+                    <PopupItem
+                      type="select"
+                      label="Zone"
+                      options={[0, 1, 2]}
+                      text={tooltip?.object.zone}
+                      editable={true}
+                      onChange={(newZone) =>
+                        handleAnchorChange({
+                          anchorId: tooltip.object.id,
+                          property: "zone",
+                          value: newZone,
+                        })
+                      }
+                    />
+                    <PopupItem
+                      type="number"
+                      label="Tokens"
+                      value={tooltip?.object.tokens}
+                      editable={true}
+                      onChange={(newTokens) =>
+                        handleAnchorChange({
+                          anchorId: tooltip.object.id,
+                          property: "tokens",
+                          value: newTokens,
+                        })
+                      }
+                    />
+                    <PopupItem
+                      type="number"
+                      label="Teams"
+                      value={tooltip?.object.teams}
+                      editable={true}
+                      onChange={(newTeam) =>
+                        handleAnchorChange({
+                          anchorId: tooltip.object.id,
+                          property: "teams",
+                          value: newTeam,
+                        })
+                      }
+                    />
+                  </PopupBody>
+                </Popup>
+              </Html>
+            </Layer>
+          )}
         </Stage>
       </div>
     </>

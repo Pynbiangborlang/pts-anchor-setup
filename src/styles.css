@@ -1,0 +1,44 @@
+.pts-anchor-setup-toolsbar {
+  width: 20px;
+  height: 600px;
+  background-color: rgba(173, 181, 184, 0.904);
+  position: absolute;
+  display: flex;
+}
+body {
+  margin: 0px;
+  height: 100vh;
+}
+.pts-toolsbar-btn {
+  width: 40px;
+  height: 30px;
+  padding: 1px;
+  margin: 4px auto;
+  border-radius: 5px;
+  box-shadow: 4px 2px 2px rgb(0 0 0 / 97%);
+  border: 0px;
+  background-color: rgba(37 165 255/93%);
+  color: whitesmoke;
+  font: 4px;
+  cursor: pointer;
+}
+.sb-pts-popup {
+  width: 300px;
+  height: 300px;
+  border: 2px solid #263942;
+  border-radius: 10px;
+}
+.sb-pts-popup-hdr {
+  width: auto;
+  height: 25px;
+  border: 0px;
+  background: #263942;
+  color: white;
+  border-radius: 10px 10px 0 0;
+  padding-left: 5px;
+}
+.sb-select {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
