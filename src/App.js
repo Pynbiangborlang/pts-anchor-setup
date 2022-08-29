@@ -1,12 +1,25 @@
 import axios from "axios";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Stage, Layer, Rect, Circle, Text, Group } from "react-konva";
+import {
+  Stage,
+  Layer,
+  Rect,
+  Circle,
+  Text,
+  Group,
+  Line,
+  Image,
+} from "react-konva";
+// import URLImage from "./components/Image";
 import { Html } from "react-konva-utils";
 import Popup, { PopupBody, PopupHeader, PopupItem } from "./components/Popup";
 import ToolsBar from "./components/ToolsBar";
 import styles from "./styles.css";
+import { isInsideShape } from "./utils/isInside";
+import floorPlan from "./assets/PTS_Floor-Plan.png";
+import useImage from "use-image";
 
-const generateLevels = ({ cellSize, anchorPos }) => {
+const generateLevels = ({ cellSize, anchorPos, shape }) => {
   let arr = [];
   let x0 = anchorPos.x,
     y0 = anchorPos.y;
@@ -19,11 +32,15 @@ const generateLevels = ({ cellSize, anchorPos }) => {
     let x = point.x,
       y = point.y;
     let points = [];
+    console.log(isInsideShape(shape, { x: x, y: y }));
 
     //top
     for (let i = x; i < x + 2 * (x0 - x); i += cellSize) {
       if (i <= x0) {
-        if (checkIsPointInCircle(i, y)) {
+        if (
+          checkIsPointInCircle(i, y) &&
+          isInsideShape(shape, { x: i, y: y })
+        ) {
           points.push({
             tokenId: "",
             x: i,
@@ -32,7 +49,10 @@ const generateLevels = ({ cellSize, anchorPos }) => {
           });
         }
       } else {
-        if (checkIsPointInCircle(cellSize + i, y)) {
+        if (
+          checkIsPointInCircle(cellSize + i, y) &&
+          isInsideShape(shape, { x: cellSize + i, y: y })
+        ) {
           points.push({
             tokenId: "",
             x: i,
@@ -48,7 +68,10 @@ const generateLevels = ({ cellSize, anchorPos }) => {
     //right
     for (let i = y + cellSize; i < y + 2 * (y0 - y) - cellSize; i += cellSize) {
       if (i <= y0) {
-        if (checkIsPointInCircle(x + 2 * (x0 - x), i)) {
+        if (
+          checkIsPointInCircle(x + 2 * (x0 - x), i) &&
+          isInsideShape(shape, { x: x + 2 * (x0 - x), y: i })
+        ) {
           points.push({
             tokenId: "",
             x: x + 2 * (x0 - x) - cellSize,
@@ -59,7 +82,10 @@ const generateLevels = ({ cellSize, anchorPos }) => {
           });
         }
       } else {
-        if (checkIsPointInCircle(x + 2 * (x0 - x), i + cellSize)) {
+        if (
+          checkIsPointInCircle(x + 2 * (x0 - x), i + cellSize) &&
+          isInsideShape(shape, { x: x + 2 * (x0 - x), y: i })
+        ) {
           points.push({
             tokenId: "",
             x: x + 2 * (x0 - x) - cellSize,
@@ -75,7 +101,10 @@ const generateLevels = ({ cellSize, anchorPos }) => {
     // //bottom
     for (let i = x + 2 * (x0 - x) - cellSize; i >= x; i -= cellSize) {
       if (i > x0) {
-        if (checkIsPointInCircle(i + cellSize, y + 2 * (y0 - y))) {
+        if (
+          checkIsPointInCircle(i + cellSize, y + 2 * (y0 - y)) &&
+          isInsideShape(shape, { x: i, y: y + 2 * (y0 - y) })
+        ) {
           points.push({
             tokenId: "",
             x: i,
@@ -86,7 +115,10 @@ const generateLevels = ({ cellSize, anchorPos }) => {
           });
         }
       } else {
-        if (checkIsPointInCircle(i, y + 2 * (y0 - y))) {
+        if (
+          checkIsPointInCircle(i, y + 2 * (y0 - y)) &&
+          isInsideShape(shape, { x: i, y: y + 2 * (y0 - y) })
+        ) {
           points.push({
             tokenId: "",
             x: i,
@@ -108,7 +140,10 @@ const generateLevels = ({ cellSize, anchorPos }) => {
       //check if point lies in circle or not
       //if no decrement x b cell size
       if (i <= y0) {
-        if (checkIsPointInCircle(x, i)) {
+        if (
+          checkIsPointInCircle(x, i) &&
+          isInsideShape(shape, { x: x, y: i })
+        ) {
           points.push({
             tokenId: "",
             x: x,
@@ -117,7 +152,10 @@ const generateLevels = ({ cellSize, anchorPos }) => {
           });
         }
       } else {
-        if (checkIsPointInCircle(x, i + cellSize)) {
+        if (
+          checkIsPointInCircle(x, i + cellSize) &&
+          isInsideShape(shape, { x: x, y: i + cellSize })
+        ) {
           points.push({
             tokenId: "",
             x: x,
@@ -186,12 +224,12 @@ const Grid = ({ cellSize, anchorPos }) => {
                   fill="yellow"
                   opacity={0.3}
                 />
-                <Text
+                {/* <Text
                   // key={`text${anchorPos.id}_${i}_${j}`}
                   text={`${k++}`}
                   x={cell.x}
                   y={cell.y}
-                ></Text>
+                ></Text> */}
               </React.Fragment>
             ))}
           </Group>
@@ -201,15 +239,30 @@ const Grid = ({ cellSize, anchorPos }) => {
   );
 };
 
+const URLImage = ({ image }) => {
+  const [img] = useImage(image.url);
+  return <Image image={img} width={image.width} height={image.height} />;
+};
+
 const App = () => {
-  const cellSize = 30;
+  const cellSize = 10;
   const stageRef = useRef(null);
+  const rectRef = useRef(null);
   const stagePos = useRef({ x: 0, y: 0 });
   const [isVisible, setIsVisible] = useState(false);
   const [anchorsPos, setAnchorsPos] = useState([]);
   const [draggedId, setDragedId] = useState(null);
   const [isSelected, setIsSelected] = useState(false);
   const [tooltip, setTooltip] = useState();
+  const [shape, setShape] = useState([
+    { x: 100, y: 100 },
+    { x: 200, y: 100 },
+    { x: 200, y: 200 },
+    { x: 100, y: 200 },
+    { x: 100, y: 100 },
+  ]);
+
+  const point = { x: 152, y: -64 };
 
   //listens when anchor is dropped in canvas
   const handleDrop = (e) => {
@@ -217,23 +270,35 @@ const App = () => {
     stageRef.current?.setPointersPositions(e);
     let { x, y } = stageRef.current?.getPointersPositions()[0];
 
-    let anchorPos = {
-      id: Date.now(),
-      x: x - stagePos.current.x,
-      y: y - stagePos.current.y,
-      radius: 210,
-      location: [[{}]],
-      zone: "",
-      tokens: 0,
-      teams: 0,
-    };
+    console.log("anchor ", x + " " + y);
+    console.log(stageRef.current.getIntersection({ x, y }));
+    if (stageRef.current.getIntersection({ x, y })) {
+      console.log("im in the rect");
 
-    anchorPos.location = [...generateLevels({ cellSize, anchorPos })];
+      let anchorPos = {
+        id: Date.now(),
+        x: x - stagePos.current.x,
+        y: y - stagePos.current.y,
+        radius: 100,
+        location: [[{}]],
+        zone: "",
+        tokens: 0,
+        teams: 0,
+      };
+      let points = stageRef.current.getIntersection({ x, y }).attrs.points;
+      console.log(points);
+      let shape = [];
+      for (let i = 0; i < points.length; i += 2) {
+        shape.push({ x: points[i], y: points[i + 1] });
+      }
+      console.log(shape);
+      anchorPos.location = [...generateLevels({ cellSize, anchorPos, shape })];
 
-    setAnchorsPos((anchorsPos) => {
-      anchorsPos.push(anchorPos);
-      return [...anchorsPos];
-    });
+      setAnchorsPos((anchorsPos) => {
+        anchorsPos.push(anchorPos);
+        return [...anchorsPos];
+      });
+    }
   };
 
   //listens when anchor is drageed in canvas
@@ -290,6 +355,11 @@ const App = () => {
       return [...currentAnchorPos];
     });
   };
+  useEffect(() => {
+    console.log("is Inside shape");
+    console.log(isInsideShape(shape, point));
+    // console.log(stageRef.current.getIntersection(point));
+  }, []);
   return (
     <>
       <ToolsBar>
@@ -325,6 +395,25 @@ const App = () => {
           }}
         >
           <Layer>
+            <URLImage
+              image={{
+                url: floorPlan,
+                width: window.innerWidth,
+                height: window.innerHeight,
+              }}
+            />
+            {/* <Circle x={point.x} y={point.y} radius={20} fill="green" /> */}
+            <Line
+              // x={100}
+              // y={100}
+              ref={rectRef}
+              stroke="green"
+              strokeWidth={2}
+              offsetX={0}
+              closed
+              points={shape.flatMap((point) => [point.x, point.y])}
+              onClick={(e) => console.log(e.target)}
+            />
             {anchorsPos?.map((anchorPos, i) => (
               <React.Fragment key={`radius${i}`}>
                 {!(draggedId === anchorPos.id) && (
@@ -370,7 +459,7 @@ const App = () => {
                   <PopupHeader className="sb-pts-popup-hdr" label="id">
                     <PopupItem
                       type="select"
-                      options={[0, 1, 2]}
+                      options={["Anchor 1", "Anchor 2", "Anchor 3"]}
                       onChange={(newZone) =>
                         handleAnchorChange({
                           anchorId: tooltip.object.id,
@@ -384,7 +473,7 @@ const App = () => {
                     <PopupItem
                       type="select"
                       label="Zone"
-                      options={[0, 1, 2]}
+                      options={["Zone 1", "Zone 2", "Zone 3"]}
                       text={tooltip?.object.zone}
                       editable={true}
                       onChange={(newZone) =>
