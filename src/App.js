@@ -18,6 +18,8 @@ import styles from "./styles.css";
 import { isInsideShape } from "./utils/isInside";
 import floorPlan from "./assets/PTS_Floor-Plan.png";
 import useImage from "use-image";
+import { PolygonConstructor } from "./lib/sb_Polygon_constructor/PolygonConstructor";
+import { ANCHOR_RADIUS, CELL_SIZE } from "./config/anchor.config";
 
 const generateLevels = ({ cellSize, anchorPos, shape }) => {
   let arr = [];
@@ -32,7 +34,6 @@ const generateLevels = ({ cellSize, anchorPos, shape }) => {
     let x = point.x,
       y = point.y;
     let points = [];
-    console.log(isInsideShape(shape, { x: x, y: y }));
 
     //top
     for (let i = x; i < x + 2 * (x0 - x); i += cellSize) {
@@ -84,7 +85,7 @@ const generateLevels = ({ cellSize, anchorPos, shape }) => {
       } else {
         if (
           checkIsPointInCircle(x + 2 * (x0 - x), i + cellSize) &&
-          isInsideShape(shape, { x: x + 2 * (x0 - x), y: i })
+          isInsideShape(shape, { x: x + 2 * (x0 - x), y: i + cellSize })
         ) {
           points.push({
             tokenId: "",
@@ -103,7 +104,7 @@ const generateLevels = ({ cellSize, anchorPos, shape }) => {
       if (i > x0) {
         if (
           checkIsPointInCircle(i + cellSize, y + 2 * (y0 - y)) &&
-          isInsideShape(shape, { x: i, y: y + 2 * (y0 - y) })
+          isInsideShape(shape, { x: i + cellSize, y: y + 2 * (y0 - y) })
         ) {
           points.push({
             tokenId: "",
@@ -245,24 +246,16 @@ const URLImage = ({ image }) => {
 };
 
 const App = () => {
-  const cellSize = 10;
+  const cellSize = CELL_SIZE;
   const stageRef = useRef(null);
-  const rectRef = useRef(null);
   const stagePos = useRef({ x: 0, y: 0 });
   const [isVisible, setIsVisible] = useState(false);
   const [anchorsPos, setAnchorsPos] = useState([]);
   const [draggedId, setDragedId] = useState(null);
   const [isSelected, setIsSelected] = useState(false);
   const [tooltip, setTooltip] = useState();
-  const [shape, setShape] = useState([
-    { x: 100, y: 100 },
-    { x: 200, y: 100 },
-    { x: 200, y: 200 },
-    { x: 100, y: 200 },
-    { x: 100, y: 100 },
-  ]);
-
-  const point = { x: 152, y: -64 };
+  const [isMapping, setIsMapping] = useState(false);
+  const [shape, setShape] = useState([]);
 
   //listens when anchor is dropped in canvas
   const handleDrop = (e) => {
@@ -270,30 +263,50 @@ const App = () => {
     stageRef.current?.setPointersPositions(e);
     let { x, y } = stageRef.current?.getPointersPositions()[0];
 
-    console.log("anchor ", x + " " + y);
-    console.log(stageRef.current.getIntersection({ x, y }));
-    if (stageRef.current.getIntersection({ x, y })) {
-      console.log("im in the rect");
-
+    if (stageRef.current.getIntersection({ x, y })?.className === "Line") {
       let anchorPos = {
         id: Date.now(),
         x: x - stagePos.current.x,
         y: y - stagePos.current.y,
-        radius: 100,
+        radius: ANCHOR_RADIUS,
         location: [[{}]],
+        shape: [],
         zone: "",
         tokens: 0,
         teams: 0,
       };
       let points = stageRef.current.getIntersection({ x, y }).attrs.points;
-      console.log(points);
       let shape = [];
       for (let i = 0; i < points.length; i += 2) {
         shape.push({ x: points[i], y: points[i + 1] });
       }
-      console.log(shape);
+      anchorPos.shape = shape;
       anchorPos.location = [...generateLevels({ cellSize, anchorPos, shape })];
 
+      setAnchorsPos((anchorsPos) => {
+        anchorsPos.push(anchorPos);
+        return [...anchorsPos];
+      });
+    } else {
+      let anchorPos = {
+        id: Date.now(),
+        x: x - stagePos.current.x,
+        y: y - stagePos.current.y,
+        radius: ANCHOR_RADIUS,
+        location: [[{}]],
+        zone: "",
+        shape: [],
+        tokens: 0,
+        teams: 0,
+      };
+      let shape = [
+        { x: x - ANCHOR_RADIUS, y: y - ANCHOR_RADIUS },
+        { x: x + ANCHOR_RADIUS, y: y - ANCHOR_RADIUS },
+        { x: x + ANCHOR_RADIUS, y: y + ANCHOR_RADIUS },
+        { x: x - ANCHOR_RADIUS, y: y + ANCHOR_RADIUS },
+      ];
+      anchorPos.shape = shape;
+      anchorPos.location = [...generateLevels({ cellSize, anchorPos, shape })];
       setAnchorsPos((anchorsPos) => {
         anchorsPos.push(anchorPos);
         return [...anchorsPos];
@@ -314,9 +327,13 @@ const App = () => {
             id: anchor.id,
             x: e.target.attrs.x,
             y: e.target.attrs.y,
-            radius: 210,
+            radius: ANCHOR_RADIUS,
           };
-          anchor.location = generateLevels({ cellSize, anchorPos });
+          anchor.location = generateLevels({
+            cellSize,
+            anchorPos,
+            shape: anchor.shape,
+          });
         }
       });
       console.log(currentAnchors);
@@ -355,11 +372,7 @@ const App = () => {
       return [...currentAnchorPos];
     });
   };
-  useEffect(() => {
-    console.log("is Inside shape");
-    console.log(isInsideShape(shape, point));
-    // console.log(stageRef.current.getIntersection(point));
-  }, []);
+
   return (
     <>
       <ToolsBar>
@@ -377,6 +390,14 @@ const App = () => {
         >
           Save
         </button>
+        <button
+          className="pts-toolsbar-btn"
+          onClick={() => {
+            setIsMapping(!isMapping);
+          }}
+        >
+          Map
+        </button>
       </ToolsBar>
       <div
         onDrop={handleDrop}
@@ -385,7 +406,7 @@ const App = () => {
         }}
       >
         <Stage
-          draggable
+          // draggable
           width={window.innerWidth}
           height={window.innerHeight}
           ref={stageRef}
@@ -402,18 +423,16 @@ const App = () => {
                 height: window.innerHeight,
               }}
             />
-            {/* <Circle x={point.x} y={point.y} radius={20} fill="green" /> */}
-            <Line
-              // x={100}
-              // y={100}
-              ref={rectRef}
-              stroke="green"
-              strokeWidth={2}
-              offsetX={0}
-              closed
-              points={shape.flatMap((point) => [point.x, point.y])}
-              onClick={(e) => console.log(e.target)}
-            />
+            {shape[0] && (
+              <Line
+                stroke="green"
+                strokeWidth={2}
+                offsetX={0}
+                closed
+                points={shape.flatMap((point) => [point.x, point.y])}
+                onClick={(e) => console.log(e.target)}
+              />
+            )}
             {anchorsPos?.map((anchorPos, i) => (
               <React.Fragment key={`radius${i}`}>
                 {!(draggedId === anchorPos.id) && (
@@ -423,7 +442,7 @@ const App = () => {
                     y={anchorPos.y}
                     radius={anchorPos.radius}
                     fill="blue"
-                    opacity={0.1}
+                    opacity={0.2}
                   />
                 )}
                 {/* representing anchor in canvas */}
@@ -451,6 +470,23 @@ const App = () => {
                   anchorPos={anchorPos}
                 />
               ))}
+            {isMapping && (
+              <PolygonConstructor
+                stageRef={stageRef}
+                width={window.innerWidth}
+                height={window.innerHeight}
+                isMultiple={false}
+                setPolygons={(polygon) => {
+                  console.log(polygon);
+                  let newShape = [];
+                  polygon[0]?.points.forEach((point) => {
+                    newShape.push({ x: point.x, y: point.y });
+                  });
+                  setShape([...newShape]);
+                  console.log("im saving shape");
+                }}
+              />
+            )}
           </Layer>
           {isSelected && (
             <Layer x={tooltip?.x} y={tooltip?.y}>

@@ -14,8 +14,6 @@ const onSegment = (p, q, r) => {
 
 const orientation = (p, q, r) => {
   let val = (q.y - p.y) * (r.x - p.x) - (r.y - p.y) * (q.x - p.x);
-
-  console.log("val", val);
   if (val === 0) {
     return 0;
   }
@@ -65,7 +63,6 @@ const doIntersect = (p1, q1, p2, q2) => {
 };
 
 const isInsideShape = (polygon, point) => {
-  console.log("checking point", point);
   if (polygon.length < 3) {
     return false;
   }
@@ -77,12 +74,6 @@ const isInsideShape = (polygon, point) => {
 
   do {
     let next = (i + 1) % polygon.length;
-    console.log("check for side", `${i}-${next}`);
-
-    console.log(
-      "is intersecting",
-      doIntersect(polygon[i], polygon[next], point, extreme)
-    );
 
     if (doIntersect(polygon[i], polygon[next], point, extreme)) {
       // If the point 'p' is collinear with line
@@ -96,7 +87,6 @@ const isInsideShape = (polygon, point) => {
     }
     i = next;
   } while (i !== 0);
-  console.log(count);
   return count % 2 === 1;
 };
 
