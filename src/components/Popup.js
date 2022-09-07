@@ -19,6 +19,7 @@ const PopupItem = ({ type = "", className = "", ...props }) => {
                 background: "white",
                 display: "flex",
                 width: props.width ? props.width : "200px",
+                border: "1px solid black",
               }}
             >
               <input
@@ -26,7 +27,6 @@ const PopupItem = ({ type = "", className = "", ...props }) => {
                   background: "white",
                   width: "94%",
                   border: "0px",
-                  background: "white",
                   outline: "0px",
                 }}
                 value={value}
@@ -39,11 +39,11 @@ const PopupItem = ({ type = "", className = "", ...props }) => {
                   float: "right",
                   background: "white",
                   border: "0px",
-                  width: "2%",
+                  width: "10%",
                 }}
                 onClick={() => setIsEditing(!isEditing)}
               >
-                {isEditing ? "^" : "v"}
+                {isEditing ? <>&#9650;</> : <>&#9660;</>}
               </button>
             </div>
             <ul
@@ -59,10 +59,14 @@ const PopupItem = ({ type = "", className = "", ...props }) => {
                 position: "absolute",
                 color: "black",
               }}
+              onMouseLeave={() => {
+                setIsEditing(!isEditing);
+              }}
             >
               {props.options &&
                 props.options.map((option, i) => (
                   <li
+                    style={{ paddingLeft: "5px" }}
                     key={i}
                     onMouseOver={(e) =>
                       (e.target.style.backgroundColor = "whitesmoke")
@@ -70,7 +74,11 @@ const PopupItem = ({ type = "", className = "", ...props }) => {
                     onMouseLeave={(e) =>
                       (e.target.style.backgroundColor = "white")
                     }
-                    onClick={() => setValue(option)}
+                    onClick={() => {
+                      setValue(option);
+                      props.onChange(option);
+                      setIsEditing(!isEditing);
+                    }}
                   >
                     {option}
                   </li>
@@ -146,9 +154,14 @@ const PopupItem = ({ type = "", className = "", ...props }) => {
   );
 };
 
-const PopupBody = ({ children, ...props }) => {
+const PopupBody = ({ className = "", children, ...props }) => {
   return (
-    <div style={{ display: "flex", flexDirection: "column" }}>{children}</div>
+    <div
+      className={className}
+      style={{ display: "flex", flexDirection: "column", padding: "2px" }}
+    >
+      {children}
+    </div>
   );
 };
 

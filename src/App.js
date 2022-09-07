@@ -20,15 +20,24 @@ import floorPlan from "./assets/PTS_Floor-Plan.png";
 import useImage from "use-image";
 import { PolygonConstructor } from "./lib/sb_Polygon_constructor/PolygonConstructor";
 import { ANCHOR_RADIUS, CELL_SIZE } from "./config/anchor.config";
+import Konva from "konva";
 
-const generateLevels = ({ cellSize, anchorPos, shape }) => {
+const generateLevels = ({
+  cellSize,
+  anchorPos,
+  shape,
+  scaleX,
+  scaleY,
+  anchorRange,
+}) => {
   let arr = [];
-  let x0 = anchorPos.x,
-    y0 = anchorPos.y;
-  let radius = anchorPos.radius;
+  let x0 = anchorPos.x * scaleX,
+    y0 = anchorPos.y * scaleY;
+  let radius = anchorRange;
   let x = x0 - cellSize,
     y = y0 - cellSize;
   let level = 0;
+  let cellIndex = 0;
 
   function interPolatePoints(point) {
     let x = point.x,
@@ -40,26 +49,31 @@ const generateLevels = ({ cellSize, anchorPos, shape }) => {
       if (i <= x0) {
         if (
           checkIsPointInCircle(i, y) &&
-          isInsideShape(shape, { x: i, y: y })
+          isInsideShape(shape, { x: i / scaleX, y: y / scaleY })
         ) {
           points.push({
+            cellIndex: cellIndex++,
             tokenId: "",
-            x: i,
-            y: y,
+            x: i / scaleX,
+            y: y / scaleY,
             distance: Math.sqrt(Math.pow(x0 - i, 2) + Math.pow(y0 - y, 2)),
           });
         }
       } else {
         if (
           checkIsPointInCircle(cellSize + i, y) &&
-          isInsideShape(shape, { x: cellSize + i, y: y })
+          isInsideShape(shape, {
+            x: (cellSize + i) / scaleX,
+            y: y / scaleY,
+          })
         ) {
           points.push({
+            cellIndex: cellIndex++,
             tokenId: "",
-            x: i,
-            y: y,
+            x: i / scaleX,
+            y: y / scaleY,
             distance: Math.sqrt(
-              Math.pow(x0 - cellSize + i, 2) + Math.pow(y0 - y, 2)
+              Math.pow(x0 - (cellSize + i), 2) + Math.pow(y0 - y, 2)
             ),
           });
         }
@@ -71,28 +85,36 @@ const generateLevels = ({ cellSize, anchorPos, shape }) => {
       if (i <= y0) {
         if (
           checkIsPointInCircle(x + 2 * (x0 - x), i) &&
-          isInsideShape(shape, { x: x + 2 * (x0 - x), y: i })
+          isInsideShape(shape, {
+            x: (x + 2 * (x0 - x)) / scaleX,
+            y: i / scaleY,
+          })
         ) {
           points.push({
+            cellIndex: cellIndex++,
             tokenId: "",
-            x: x + 2 * (x0 - x) - cellSize,
-            y: i,
+            x: (x + 2 * (x0 - x) - cellSize) / scaleX,
+            y: i / scaleY,
             distance: Math.sqrt(
-              Math.pow(x0 - x + cellSize, 2) + Math.pow(y0 - i, 2)
+              Math.pow(x0 - (x + cellSize), 2) + Math.pow(y0 - i, 2)
             ),
           });
         }
       } else {
         if (
           checkIsPointInCircle(x + 2 * (x0 - x), i + cellSize) &&
-          isInsideShape(shape, { x: x + 2 * (x0 - x), y: i + cellSize })
+          isInsideShape(shape, {
+            x: (x + 2 * (x0 - x)) / scaleX,
+            y: (i + cellSize) / scaleY,
+          })
         ) {
           points.push({
+            cellIndex: cellIndex++,
             tokenId: "",
-            x: x + 2 * (x0 - x) - cellSize,
-            y: i,
+            x: (x + 2 * (x0 - x) - cellSize) / scaleX,
+            y: i / scaleY,
             distance: Math.sqrt(
-              Math.pow(x0 - x, 2) + Math.pow(y0 - i + cellSize, 2)
+              Math.pow(x0 - x, 2) + Math.pow(y0 - (i + cellSize), 2)
             ),
           });
         }
@@ -104,12 +126,16 @@ const generateLevels = ({ cellSize, anchorPos, shape }) => {
       if (i > x0) {
         if (
           checkIsPointInCircle(i + cellSize, y + 2 * (y0 - y)) &&
-          isInsideShape(shape, { x: i + cellSize, y: y + 2 * (y0 - y) })
+          isInsideShape(shape, {
+            x: (i + cellSize) / scaleX,
+            y: (y + 2 * (y0 - y)) / scaleY,
+          })
         ) {
           points.push({
+            cellIndex: cellIndex++,
             tokenId: "",
-            x: i,
-            y: y + 2 * (y0 - y) - cellSize,
+            x: i / scaleX,
+            y: (y + 2 * (y0 - y) - cellSize) / scaleY,
             distance: Math.sqrt(
               Math.pow(x0 - i + cellSize, 2) + Math.pow(y0 - y, 2)
             ),
@@ -118,14 +144,18 @@ const generateLevels = ({ cellSize, anchorPos, shape }) => {
       } else {
         if (
           checkIsPointInCircle(i, y + 2 * (y0 - y)) &&
-          isInsideShape(shape, { x: i, y: y + 2 * (y0 - y) })
+          isInsideShape(shape, {
+            x: i / scaleX,
+            y: (y + 2 * (y0 - y)) / scaleY,
+          })
         ) {
           points.push({
+            cellIndex: cellIndex++,
             tokenId: "",
-            x: i,
-            y: y + 2 * (y0 - y) - cellSize,
+            x: i / scaleX,
+            y: (y + 2 * (y0 - y) - cellSize) / scaleY,
             distance: Math.sqrt(
-              Math.pow(x0 - i, 2) + Math.pow(y0 - y + 2 * (y0 - y), 2)
+              Math.pow(x0 - i, 2) + Math.pow(y0 - (y + 2 * (y0 - y)), 2)
             ),
           });
         }
@@ -143,26 +173,31 @@ const generateLevels = ({ cellSize, anchorPos, shape }) => {
       if (i <= y0) {
         if (
           checkIsPointInCircle(x, i) &&
-          isInsideShape(shape, { x: x, y: i })
+          isInsideShape(shape, { x: x / scaleX, y: i / scaleY })
         ) {
           points.push({
+            cellIndex: cellIndex++,
             tokenId: "",
-            x: x,
-            y: i,
+            x: x / scaleX,
+            y: i / scaleY,
             distance: Math.sqrt(Math.pow(x0 - x, 2) + Math.pow(y0 - i, 2)),
           });
         }
       } else {
         if (
           checkIsPointInCircle(x, i + cellSize) &&
-          isInsideShape(shape, { x: x, y: i + cellSize })
+          isInsideShape(shape, {
+            x: x / scaleX,
+            y: (i + cellSize) / scaleY,
+          })
         ) {
           points.push({
+            cellIndex: cellIndex++,
             tokenId: "",
-            x: x,
-            y: i,
+            x: x / scaleX,
+            y: i / scaleY,
             distance: Math.sqrt(
-              Math.pow(x0 - x, 2) + Math.pow(y0 - i + cellSize, 2)
+              Math.pow(x0 - x, 2) + Math.pow(y0 - (i + cellSize), 2)
             ),
           });
         }
@@ -185,39 +220,21 @@ const generateLevels = ({ cellSize, anchorPos, shape }) => {
     y = y - cellSize;
     level++;
   }
+  console.log(arr);
   return arr;
 };
 
-const Grid = ({ cellSize, anchorPos }) => {
-  let k = 0;
+const Grid = ({ cellSize, anchorPos, scaleX, scaleY }) => {
   return (
     <>
-      {anchorPos?.location.map((level, i) => {
+      {anchorPos?.locations.map((level, i) => {
         return (
-          <Group
-            key={`${anchorPos.id}_level${i}`}
-            onMouseOver={(e) => {
-              e.target.parent?.children.map((child) => {
-                if (child.className === "Rect") {
-                  child.setAttr("fill", "green");
-                }
-              });
-            }}
-            opacity={1}
-            onMouseOut={(e) => {
-              e.target?.parent?.children.map((child) => {
-                if (child.className === "Rect") {
-                  child.setAttr("fill", "yellow");
-                }
-              });
-            }}
-          >
+          <Group key={`${anchorPos.id}_level${i}`} opacity={1}>
             {level.map((cell, j) => (
               <React.Fragment key={`rect${anchorPos.id}_${i}_${j}`}>
                 <Rect
-                  // key={`rect${anchorPos.id}_${i}_${j}`}
-                  x={cell.x}
-                  y={cell.y}
+                  x={cell.x * scaleX}
+                  y={cell.y * scaleY}
                   width={cellSize}
                   height={cellSize}
                   stroke="black"
@@ -225,12 +242,6 @@ const Grid = ({ cellSize, anchorPos }) => {
                   fill="yellow"
                   opacity={0.3}
                 />
-                {/* <Text
-                  // key={`text${anchorPos.id}_${i}_${j}`}
-                  text={`${k++}`}
-                  x={cell.x}
-                  y={cell.y}
-                ></Text> */}
               </React.Fragment>
             ))}
           </Group>
@@ -246,16 +257,31 @@ const URLImage = ({ image }) => {
 };
 
 const App = () => {
-  const cellSize = CELL_SIZE;
   const stageRef = useRef(null);
-  const stagePos = useRef({ x: 0, y: 0 });
+  const [stagePos, setStagePos] = useState({ x: 0, y: 0 });
   const [isVisible, setIsVisible] = useState(false);
-  const [anchorsPos, setAnchorsPos] = useState([]);
+  const [anchors, setAnchors] = useState([]);
   const [draggedId, setDragedId] = useState(null);
   const [isSelected, setIsSelected] = useState(false);
-  const [tooltip, setTooltip] = useState();
+  const [tooltip, setTooltip] = useState({});
   const [isMapping, setIsMapping] = useState(false);
   const [shape, setShape] = useState([]);
+  const [anchorsIds, setAnchorsIds] = useState([]);
+  const [zones, setZones] = useState([]);
+  const scaleX = window.innerWidth / 100;
+  const scaleY = window.innerHeight / 100;
+  const [prevScale, setPrevScale] = useState({
+    scaleX: scaleX,
+    scaleY: scaleY,
+  });
+  const [cellSize, setCellSize] = useState(CELL_SIZE);
+  const [anchorRange, setAnchorRange] = useState(ANCHOR_RADIUS);
+
+  useEffect(() => {
+    setCellSize((cellSize / prevScale.scaleX) * scaleX);
+    setAnchorRange((anchorRange / prevScale.scaleX) * scaleX);
+    setPrevScale({ ...prevScale, scaleX: scaleX, scaleY: scaleY });
+  }, [scaleX, scaleY]);
 
   //listens when anchor is dropped in canvas
   const handleDrop = (e) => {
@@ -266,50 +292,64 @@ const App = () => {
     if (stageRef.current.getIntersection({ x, y })?.className === "Line") {
       let anchorPos = {
         id: Date.now(),
-        x: x - stagePos.current.x,
-        y: y - stagePos.current.y,
-        radius: ANCHOR_RADIUS,
-        location: [[{}]],
+        x: (x - stagePos.x) / scaleX,
+        y: (y - stagePos.y) / scaleY,
+        radius: ANCHOR_RADIUS / scaleX,
+        locations: [[{}]],
         shape: [],
-        zone: "",
-        tokens: 0,
-        teams: 0,
       };
       let points = stageRef.current.getIntersection({ x, y }).attrs.points;
       let shape = [];
+      //cache the points of the room
       for (let i = 0; i < points.length; i += 2) {
-        shape.push({ x: points[i], y: points[i + 1] });
+        shape.push({ x: points[i] / scaleX, y: points[i + 1] / scaleY });
       }
       anchorPos.shape = shape;
-      anchorPos.location = [...generateLevels({ cellSize, anchorPos, shape })];
+      anchorPos.locations = [
+        ...generateLevels({
+          cellSize,
+          anchorPos,
+          shape,
+          scaleX,
+          scaleY,
+          anchorRange,
+        }),
+      ];
 
-      setAnchorsPos((anchorsPos) => {
-        anchorsPos.push(anchorPos);
-        return [...anchorsPos];
+      setAnchors((currentAnchors) => {
+        currentAnchors.push(anchorPos);
+        return [...currentAnchors];
       });
     } else {
       let anchorPos = {
         id: Date.now(),
-        x: x - stagePos.current.x,
-        y: y - stagePos.current.y,
-        radius: ANCHOR_RADIUS,
-        location: [[{}]],
-        zone: "",
+        x: (x - stagePos.x) / scaleX,
+        y: (y - stagePos.y) / scaleY,
+        radius: ANCHOR_RADIUS / scaleX,
+        locations: [[{}]],
         shape: [],
-        tokens: 0,
-        teams: 0,
       };
       let shape = [
-        { x: x - ANCHOR_RADIUS, y: y - ANCHOR_RADIUS },
-        { x: x + ANCHOR_RADIUS, y: y - ANCHOR_RADIUS },
-        { x: x + ANCHOR_RADIUS, y: y + ANCHOR_RADIUS },
-        { x: x - ANCHOR_RADIUS, y: y + ANCHOR_RADIUS },
+        { x: (x - ANCHOR_RADIUS) / scaleX, y: (y - ANCHOR_RADIUS) / scaleY },
+        { x: (x + ANCHOR_RADIUS) / scaleX, y: (y - ANCHOR_RADIUS) / scaleY },
+        { x: (x + ANCHOR_RADIUS) / scaleX, y: (y + ANCHOR_RADIUS) / scaleY },
+        { x: (x - ANCHOR_RADIUS) / scaleX, y: (y + ANCHOR_RADIUS) / scaleY },
+        { x: (x - ANCHOR_RADIUS) / scaleX, y: (y - ANCHOR_RADIUS) / scaleY },
       ];
-      anchorPos.shape = shape;
-      anchorPos.location = [...generateLevels({ cellSize, anchorPos, shape })];
-      setAnchorsPos((anchorsPos) => {
-        anchorsPos.push(anchorPos);
-        return [...anchorsPos];
+      // anchorPos.shape = shape;s
+      anchorPos.locations = [
+        ...generateLevels({
+          cellSize,
+          anchorPos,
+          shape,
+          scaleX,
+          scaleY,
+          anchorRange,
+        }),
+      ];
+      setAnchors((anchors) => {
+        anchors.push(anchorPos);
+        return [...anchors];
       });
     }
   };
@@ -318,25 +358,52 @@ const App = () => {
   const handleAnchorDrag = ({ e, anchorPos }) => {
     setDragedId(null);
 
-    setAnchorsPos((currentAnchors) => {
+    setAnchors((currentAnchors) => {
       currentAnchors.forEach((anchor) => {
         if (anchor.id === anchorPos.id) {
-          anchor.x = e.target.attrs.x;
-          anchor.y = e.target.attrs.y;
+          anchor.x = e.target.attrs.x / scaleX;
+          anchor.y = e.target.attrs.y / scaleY;
           let anchorPos = {
             id: anchor.id,
-            x: e.target.attrs.x,
-            y: e.target.attrs.y,
-            radius: ANCHOR_RADIUS,
+            x: e.target.attrs.x / scaleX,
+            y: e.target.attrs.y / scaleY,
+            radius: ANCHOR_RADIUS / scaleX,
           };
-          anchor.location = generateLevels({
+          let x = e.target.attrs.x;
+          let y = e.target.attrs.y;
+          anchor.locations = generateLevels({
             cellSize,
             anchorPos,
-            shape: anchor.shape,
+            shape: anchor.shape[0]
+              ? anchor.shape
+              : [
+                  {
+                    x: (x - ANCHOR_RADIUS) / scaleX,
+                    y: (y - ANCHOR_RADIUS) / scaleY,
+                  },
+                  {
+                    x: (x + ANCHOR_RADIUS) / scaleX,
+                    y: (y - ANCHOR_RADIUS) / scaleY,
+                  },
+                  {
+                    x: (x + ANCHOR_RADIUS) / scaleX,
+                    y: (y + ANCHOR_RADIUS) / scaleY,
+                  },
+                  {
+                    x: (x - ANCHOR_RADIUS) / scaleX,
+                    y: (y + ANCHOR_RADIUS) / scaleY,
+                  },
+                  {
+                    x: (x - ANCHOR_RADIUS) / scaleX,
+                    y: (y - ANCHOR_RADIUS) / scaleY,
+                  },
+                ],
+            scaleX,
+            scaleY,
+            anchorRange,
           });
         }
       });
-      console.log(currentAnchors);
       return [...currentAnchors];
     });
   };
@@ -355,7 +422,7 @@ const App = () => {
   const handleAnchorChange = ({ anchorId, property, value }) => {
     console.log(value);
     console.log(anchorId);
-    setAnchorsPos((currentAnchorPos) => {
+    setAnchors((currentAnchorPos) => {
       currentAnchorPos.map((anchor) => {
         if (anchorId === anchor.id) {
           if (property === "id") {
@@ -373,6 +440,36 @@ const App = () => {
     });
   };
 
+  useEffect(() => {
+    axios
+      .get("http://localhost:9000/api/1/anchors?Active_YN=Y")
+      .then((res) => {
+        console.log(res.data);
+        if (!res.data[0]) return;
+        setAnchors((currentAnchors) => {
+          res.data.map((anchor) =>
+            currentAnchors.push({
+              id: anchor.id,
+              locations: anchor.locations,
+              shape: anchor.shape,
+              x: anchor.x,
+              y: anchor.y,
+              radius: anchor.range,
+              site_id: anchor.site_id,
+            })
+          );
+          return [...currentAnchors];
+        });
+      })
+      .catch((err) => console.log(err));
+    axios.get("http://localhost:9000/api/1/anchors?Active_YN=N").then((res) => {
+      setAnchorsIds([...res.data.flatMap((anchor) => [anchor.a_id])]);
+    });
+    axios.get("http://localhost:9000/api/1/zones").then((res) => {
+      setZones([...res.data]);
+    });
+  }, []);
+
   return (
     <>
       <ToolsBar>
@@ -385,7 +482,13 @@ const App = () => {
         <button
           className="pts-toolsbar-btn"
           onClick={() => {
-            console.log(anchorsPos);
+            let body = anchors;
+            console.log(anchors);
+            console.log("save");
+            axios
+              .post("http://localhost:9000/api/anchors", body)
+              .then((res) => console.log("sucess"))
+              .catch((err) => console.log(err));
           }}
         >
           Save
@@ -406,13 +509,16 @@ const App = () => {
         }}
       >
         <Stage
-          // draggable
+          draggable
           width={window.innerWidth}
           height={window.innerHeight}
           ref={stageRef}
           onDragEnd={(e) => {
-            stagePos.current.x = e.currentTarget.position().x;
-            stagePos.current.y = e.currentTarget.position().y;
+            setStagePos({
+              ...stagePos,
+              x: e.currentTarget.position().x,
+              y: e.currentTarget.position().y,
+            });
           }}
         >
           <Layer>
@@ -426,64 +532,86 @@ const App = () => {
             {shape[0] && (
               <Line
                 stroke="green"
-                strokeWidth={2}
+                strokeWidth={5}
                 offsetX={0}
                 closed
-                points={shape.flatMap((point) => [point.x, point.y])}
+                points={shape.flatMap((point) => [
+                  point.x * scaleX,
+                  point.y * scaleY,
+                ])}
                 onClick={(e) => console.log(e.target)}
               />
             )}
-            {anchorsPos?.map((anchorPos, i) => (
-              <React.Fragment key={`radius${i}`}>
-                {!(draggedId === anchorPos.id) && (
-                  // the radius coverage of the anchor
-                  <Circle
-                    x={anchorPos.x}
-                    y={anchorPos.y}
-                    radius={anchorPos.radius}
-                    fill="blue"
-                    opacity={0.2}
-                  />
-                )}
-                {/* representing anchor in canvas */}
-                <Circle
-                  x={anchorPos.x}
-                  y={anchorPos.y}
-                  radius={10}
-                  fill="red"
-                  opacity={0.7}
-                  draggable
-                  onDragStart={() => {
-                    setDragedId(anchorPos.id);
-                    setIsSelected(false);
-                  }}
-                  onDragEnd={(e) => handleAnchorDrag({ e, anchorPos })}
-                  onClick={(e) => handleAnchorClick(e, anchorPos)}
+            {anchors[0] &&
+              anchors?.map((anchor, i) => (
+                <Line
+                  key={i}
+                  stroke={Konva.Util.getRandomColor()}
+                  strokeWidth={5}
+                  points={anchor.shape.flatMap((point) => [
+                    point.x * scaleX,
+                    point.y * scaleY,
+                  ])}
                 />
-              </React.Fragment>
-            ))}
+              ))}
+            {anchors[0] &&
+              anchors?.map((anchorPos, i) => (
+                <React.Fragment key={`radius${i}`}>
+                  {!(draggedId === anchorPos.id) &&
+                    // the radius coverage of the anchor
+                    !anchorPos.shape[0] && (
+                      <Circle
+                        x={anchorPos.x * scaleX}
+                        y={anchorPos.y * scaleY}
+                        radius={anchorRange}
+                        fill="blue"
+                        opacity={0.2}
+                      />
+                    )}
+                  {/* representing anchor in canvas */}
+                  <Circle
+                    x={anchorPos.x * scaleX}
+                    y={anchorPos.y * scaleY}
+                    radius={10}
+                    fill="red"
+                    opacity={0.7}
+                    draggable
+                    onDragStart={() => {
+                      setDragedId(anchorPos.id);
+                      setIsSelected(false);
+                    }}
+                    onDragEnd={(e) => handleAnchorDrag({ e, anchorPos })}
+                    onClick={(e) => handleAnchorClick(e, anchorPos)}
+                  />
+                </React.Fragment>
+              ))}
             {isVisible &&
-              anchorsPos?.map((anchorPos) => (
+              anchors[0] &&
+              anchors.map((anchor) => (
                 <Grid
-                  key={anchorPos.id}
+                  key={anchor.id}
                   cellSize={cellSize}
-                  anchorPos={anchorPos}
+                  anchorPos={anchor}
+                  scaleX={scaleX}
+                  scaleY={scaleY}
                 />
               ))}
             {isMapping && (
               <PolygonConstructor
-                stageRef={stageRef}
+                stage={{ ref: stageRef, pos: stagePos }}
                 width={window.innerWidth}
                 height={window.innerHeight}
                 isMultiple={false}
                 setPolygons={(polygon) => {
                   console.log(polygon);
+                  if (!polygon[0]) return;
                   let newShape = [];
                   polygon[0]?.points.forEach((point) => {
-                    newShape.push({ x: point.x, y: point.y });
+                    newShape.push({ x: point.x / scaleX, y: point.y / scaleY });
                   });
                   setShape([...newShape]);
                   console.log("im saving shape");
+                  setIsMapping(false);
                 }}
               />
             )}
@@ -492,24 +620,25 @@ const App = () => {
             <Layer x={tooltip?.x} y={tooltip?.y}>
               <Html>
                 <Popup className="sb-pts-popup">
-                  <PopupHeader className="sb-pts-popup-hdr" label="id">
+                  <PopupHeader className="sb-pts-popup-hdr" label="id:">
                     <PopupItem
                       type="select"
-                      options={["Anchor 1", "Anchor 2", "Anchor 3"]}
-                      onChange={(newZone) =>
+                      options={anchorsIds}
+                      onChange={(newId) => {
+                        console.log(newId);
                         handleAnchorChange({
                           anchorId: tooltip.object.id,
-                          property: "zone",
-                          value: newZone,
-                        })
-                      }
+                          property: "id",
+                          value: newId,
+                        });
+                      }}
                     />
                   </PopupHeader>
-                  <PopupBody>
+                  <PopupBody className="sb-popup-body">
                     <PopupItem
                       type="select"
                       label="Zone"
-                      options={["Zone 1", "Zone 2", "Zone 3"]}
+                      options={zones.flatMap((zone) => [zone.zone])}
                       text={tooltip?.object.zone}
                       editable={true}
                       onChange={(newZone) =>

@@ -24,7 +24,6 @@ body {
 }
 .sb-pts-popup {
   width: 300px;
-  height: 300px;
   border: 2px solid #263942;
   border-radius: 10px;
 }
@@ -41,4 +40,7 @@ body {
   width: 100%;
   display: flex;
   flex-direction: column;
+}
+.sb-popup-body {
+  background-color: whitesmoke;
 }

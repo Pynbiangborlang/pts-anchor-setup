@@ -192,7 +192,7 @@ export const Polygon = ({ polygon, isSelected, onChange, onSelect }) => {
 };
 
 export const PolygonConstructor = ({
-  stageRef,
+  stage,
   width,
   height,
   polygons,
@@ -206,6 +206,7 @@ export const PolygonConstructor = ({
     points: [],
     lastPosition: {},
   });
+  const rectRef = useRef(null);
   const [isEnable, setIsEnable] = useState(false);
   const [isUpdated, setIsUpdate] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
@@ -218,45 +219,48 @@ export const PolygonConstructor = ({
   const onSave = () => {
     selectShape(null);
     setIsEditing(false);
-    setPolygons(newPolygons);
+    setPolygons([...newPolygons]);
     setIsUpdate(true);
   };
 
   const onCreatePoint = (e) => {
-    isMultiple
-      ? () => {}
-      : isComplete && newPolygons[0]
-      ? () => {
-          return;
-        }
-      : () => {};
+    if (isComplete) return;
 
-    let pos = e.evt;
-    setPoints([
-      ...points,
-      {
+    // let mousePos = rectRef.current.getStage().getPointersPositions()[0];
+    let offsetX = e.evt.offsetX;
+    let offsetY = e.evt.offsetY;
+    setPoints((currentPoints) => {
+      currentPoints.push({
         id: Date.now(),
-        x: pos.offsetX * newScale,
-        y: pos.offsetY * newScale,
-      },
-    ]);
+        x: offsetX - stage.pos.x,
+        y: offsetY - stage.pos.y,
+      });
+      return [...currentPoints];
+    });
   };
 
   const predictNextPoint = (e) => {
+    let mousePos = rectRef.current.getStage().getPointersPositions()[0];
+    let offsetX = e.evt.offsetX;
+    let offsetY = e.evt.offsetY;
     if (isComplete) {
       setHistory({
         ...history,
-        lastPosition: { x: e.evt.offsetX, y: e.evt.offsetY },
+        lastPosition: {
+          x: offsetX - stage.pos.x,
+          y: offsetY - stage.pos.y,
+        },
       });
       return;
     }
-    let pos = e.evt;
-    setnextPoint([pos.offsetX * newScale, pos.offsetY * newScale]);
+    setnextPoint((currentNextPoints) => {
+      currentNextPoints = [offsetX - stage.pos.x, offsetY - stage.pos.y];
+      return [...currentNextPoints];
+    });
   };
 
   const onCompleteShape = (e) => {
     setIsUpdate(false);
-    // setIsComplete(true);
     setIsEditing(false);
     isMultiple
       ? setNewPolygons([
@@ -265,8 +269,8 @@ export const PolygonConstructor = ({
             id: Date.now(),
             points: points.concat({
               id: Date.now(),
-              x: e.target.attrs.x * newScale,
-              y: e.target.attrs.y * newScale,
+              x: e.target.attrs.x,
+              y: e.target.attrs.y,
             }),
           },
         ])
@@ -275,8 +279,8 @@ export const PolygonConstructor = ({
             id: Date.now(),
             points: points.concat({
               id: Date.now(),
-              x: e.target.attrs.x * newScale,
-              y: e.target.attrs.y * newScale,
+              x: e.target.attrs.x,
+              y: e.target.attrs.y,
             }),
           },
         ]);
@@ -286,8 +290,7 @@ export const PolygonConstructor = ({
     });
     setPoints([]);
     setnextPoint([]);
-    onSave();
-    console.log("******** Polygon Points**********\n");
+    console.log("******* Polygon Points**********\n");
     console.log(JSON.stringify(points));
     if (!isMultiple) {
       setIsComplete(true);
@@ -384,26 +387,19 @@ export const PolygonConstructor = ({
     return () => {
       document.removeEventListener("keydown", keyListener);
     };
-  }, []);
+  });
 
   useEffect(() => {
     window.alert(
       `Click 'E' to Enable\n ctrl+z to undo\nClick 'Delete' to delete\nClick 'Enter' to save`
     );
   }, []);
+  useEffect(() => {
+    onSave();
+  }, [newPolygons]);
 
   return (
     <>
-      {!isEditing && isEnable && !isComplete && (
-        <Rect
-          x={0}
-          y={0}
-          width={window.innerWidth}
-          height={window.innerHeight}
-          onClick={onCreatePoint}
-          onMouseMove={predictNextPoint}
-        />
-      )}
       <Line
         opacity={1}
         points={points.flatMap((point) => [point.x, point.y]).concat(nextPoint)}
@@ -415,18 +411,17 @@ export const PolygonConstructor = ({
         closed={isComplete}
       />
 
-      {points[0] && !isComplete && (
+      {points.map((point, i) => (
         <Circle
-          x={points[0].x}
-          y={points[0].y}
-          radius={10}
+          key={i}
+          x={point.x}
+          y={point.y}
+          fill="white"
+          radius={2}
           stroke="black"
-          onClick={onCompleteShape}
-          onMouseOver={(e) => e.target.setFill("green")}
-          onMouseOut={(e) => e.target.setFill("transparent")}
-          opacity={0.8}
+          strokeWidth={3}
         />
-      )}
+      ))}
 
       {isMultiple
         ? newPolygons[0] &&
@@ -444,7 +439,6 @@ export const PolygonConstructor = ({
                 selectShape(id);
               }}
               onChange={(newPolygon) => {
-                console.log("changed");
                 updatePolygons(newPolygon);
               }}
             />
@@ -471,6 +465,27 @@ export const PolygonConstructor = ({
               }}
             />
           )}
+      {!isEditing && isEnable && !isComplete && (
+        <Rect
+          ref={rectRef}
+          width={width}
+          height={height}
+          onClick={onCreatePoint}
+          onMouseMove={predictNextPoint}
+        />
+      )}
+      {points[0] && !isComplete && (
+        <Circle
+          x={points[0].x}
+          y={points[0].y}
+          radius={10}
+          stroke="black"
+          onClick={onCompleteShape}
+          onMouseOver={(e) => e.target.setFill("green")}
+          onMouseOut={(e) => e.target.setFill("transparent")}
+          opacity={0.8}
+        />
+      )}
     </>
   );
 };
