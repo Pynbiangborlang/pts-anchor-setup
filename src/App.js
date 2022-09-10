@@ -21,6 +21,7 @@ import useImage from "use-image";
 import { PolygonConstructor } from "./lib/sb_Polygon_constructor/PolygonConstructor";
 import { ANCHOR_RADIUS, CELL_SIZE } from "./config/anchor.config";
 import Konva from "konva";
+import ToastContainer from "./components/ToastContainer";
 
 const generateLevels = ({
   cellSize,
@@ -230,20 +231,25 @@ const Grid = ({ cellSize, anchorPos, scaleX, scaleY }) => {
       {anchorPos?.locations.map((level, i) => {
         return (
           <Group key={`${anchorPos.id}_level${i}`} opacity={1}>
-            {level.map((cell, j) => (
-              <React.Fragment key={`rect${anchorPos.id}_${i}_${j}`}>
-                <Rect
-                  x={cell.x * scaleX}
-                  y={cell.y * scaleY}
-                  width={cellSize}
-                  height={cellSize}
-                  stroke="black"
-                  strokeWidth={0.5}
-                  fill="yellow"
-                  opacity={0.3}
-                />
-              </React.Fragment>
-            ))}
+            {level.map((cell, j) => {
+              if (i === 0) {
+                return;
+              }
+              return (
+                <React.Fragment key={`rect${anchorPos.id}_${i}_${j}`}>
+                  <Rect
+                    x={cell.x * scaleX}
+                    y={cell.y * scaleY}
+                    width={cellSize}
+                    height={cellSize}
+                    stroke="black"
+                    strokeWidth={0.5}
+                    fill="yellow"
+                    opacity={0.3}
+                  />
+                </React.Fragment>
+              );
+            })}
           </Group>
         );
       })}
@@ -257,30 +263,37 @@ const URLImage = ({ image }) => {
 };
 
 const App = () => {
+  const [anchors, setAnchors] = useState([]);
+  const [anchorsIds, setAnchorsIds] = useState([]);
+  const [anchorRange, setAnchorRange] = useState(ANCHOR_RADIUS);
+  const [cellSize, setCellSize] = useState(CELL_SIZE);
+  const [draggedId, setDragedId] = useState(null);
+  const [isMouseOver, setIsMouseOver] = useState(false);
+  const [isMapping, setIsMapping] = useState(false);
+  const [isSelected, setIsSelected] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+  const [prevScale, setPrevScale] = useState({
+    scaleX: window.innerWidth / 100,
+    scaleY: window.innerHeight / 100,
+  });
+  const [shape, setShape] = useState([]);
   const stageRef = useRef(null);
   const [stagePos, setStagePos] = useState({ x: 0, y: 0 });
-  const [isVisible, setIsVisible] = useState(false);
-  const [anchors, setAnchors] = useState([]);
-  const [draggedId, setDragedId] = useState(null);
-  const [isSelected, setIsSelected] = useState(false);
-  const [tooltip, setTooltip] = useState({});
-  const [isMapping, setIsMapping] = useState(false);
-  const [shape, setShape] = useState([]);
-  const [anchorsIds, setAnchorsIds] = useState([]);
-  const [zones, setZones] = useState([]);
   const scaleX = window.innerWidth / 100;
   const scaleY = window.innerHeight / 100;
-  const [prevScale, setPrevScale] = useState({
-    scaleX: scaleX,
-    scaleY: scaleY,
-  });
-  const [cellSize, setCellSize] = useState(CELL_SIZE);
-  const [anchorRange, setAnchorRange] = useState(ANCHOR_RADIUS);
+  const [toast, setToast] = useState({ type: "", message: "", show: false });
+  const [tooltip, setTooltip] = useState({});
+  const [zones, setZones] = useState([]);
 
-  useEffect(() => {
+  useMemo(() => {
+    console.log("scale changes");
     setCellSize((cellSize / prevScale.scaleX) * scaleX);
     setAnchorRange((anchorRange / prevScale.scaleX) * scaleX);
-    setPrevScale({ ...prevScale, scaleX: scaleX, scaleY: scaleY });
+    setPrevScale({
+      ...prevScale,
+      scaleX: window.innerWidth / 100,
+      scaleY: window.innerHeight / 100,
+    });
   }, [scaleX, scaleY]);
 
   //listens when anchor is dropped in canvas
@@ -292,6 +305,7 @@ const App = () => {
     if (stageRef.current.getIntersection({ x, y })?.className === "Line") {
       let anchorPos = {
         id: Date.now(),
+        a_id: null,
         x: (x - stagePos.x) / scaleX,
         y: (y - stagePos.y) / scaleY,
         radius: ANCHOR_RADIUS / scaleX,
@@ -323,6 +337,7 @@ const App = () => {
     } else {
       let anchorPos = {
         id: Date.now(),
+        a_id: null,
         x: (x - stagePos.x) / scaleX,
         y: (y - stagePos.y) / scaleY,
         radius: ANCHOR_RADIUS / scaleX,
@@ -356,26 +371,33 @@ const App = () => {
 
   //listens when anchor is drageed in canvas
   const handleAnchorDrag = ({ e, anchorPos }) => {
+    setIsSelected(false);
     setDragedId(null);
 
     setAnchors((currentAnchors) => {
-      currentAnchors.forEach((anchor) => {
-        if (anchor.id === anchorPos.id) {
-          anchor.x = e.target.attrs.x / scaleX;
-          anchor.y = e.target.attrs.y / scaleY;
-          let anchorPos = {
-            id: anchor.id,
+      let newAnchors = currentAnchors;
+      for (let i = 0; i < currentAnchors.length; i++) {
+        if (
+          newAnchors[i].id === anchorPos.id ||
+          newAnchors[i].a_id === anchorPos.a_id
+        ) {
+          console.log("set");
+          newAnchors[i].x = e.target.attrs.x / scaleX;
+          newAnchors[i].y = e.target.attrs.y / scaleY;
+          let newAnchorPos = {
+            id: newAnchors[i]?.id,
+            a_id: newAnchors[i].a_id,
             x: e.target.attrs.x / scaleX,
             y: e.target.attrs.y / scaleY,
             radius: ANCHOR_RADIUS / scaleX,
           };
           let x = e.target.attrs.x;
           let y = e.target.attrs.y;
-          anchor.locations = generateLevels({
+          newAnchors[i].locations = generateLevels({
             cellSize,
-            anchorPos,
-            shape: anchor.shape[0]
-              ? anchor.shape
+            anchorPos: newAnchorPos,
+            shape: newAnchors[i].shape[0]
+              ? newAnchors[i].shape
               : [
                   {
                     x: (x - ANCHOR_RADIUS) / scaleX,
@@ -402,14 +424,17 @@ const App = () => {
             scaleY,
             anchorRange,
           });
+          break;
         }
-      });
-      return [...currentAnchors];
+      }
+      return [...newAnchors];
     });
   };
 
-  //listens when anchor is clicked
+  //listens when newAnchors is clicked
   const handleAnchorClick = (e, anchor) => {
+    console.log("abcd");
+    // setIsMouseOver(false);
     setIsSelected(!isSelected);
     setTooltip({
       x: e.target.attrs.x + 5,
@@ -420,13 +445,11 @@ const App = () => {
 
   //listens when anchor property is changing
   const handleAnchorChange = ({ anchorId, property, value }) => {
-    console.log(value);
-    console.log(anchorId);
     setAnchors((currentAnchorPos) => {
       currentAnchorPos.map((anchor) => {
         if (anchorId === anchor.id) {
           if (property === "id") {
-            anchor.id = value;
+            anchor.a_id = value;
           } else if (property === "zone") {
             anchor.zone = value;
           } else if (property === "tokens") {
@@ -439,6 +462,115 @@ const App = () => {
       return [...currentAnchorPos];
     });
   };
+  //listens when anchor is clicked
+  const handleAnchorMouseOver = (e, anchor) => {
+    setIsMouseOver(true);
+    setTooltip({
+      x: e.target.attrs.x + 5,
+      y: e.target.attrs.y + 2,
+      object: anchor,
+    });
+  };
+
+  const refetch = () => {
+    axios
+      .get("http://localhost:9000/api/1/anchors?Active_YN=Y")
+      .then((res) => {
+        console.log(res.data);
+        if (!res.data[0]) {
+          setAnchors([...res.data]);
+          setIsSelected(false);
+          return;
+        }
+        setAnchors((currentAnchors) => {
+          currentAnchors = [];
+          let id = 0;
+          res.data.map((anchor) =>
+            currentAnchors.push({
+              id: id++,
+              a_id: anchor.a_id,
+              locations: anchor.locations,
+              shape: anchor.shape,
+              x: anchor.x,
+              y: anchor.y,
+              radius: anchor.range,
+              site_id: anchor.site_id,
+              active_yn: anchor.Active_YN,
+            })
+          );
+          return [...currentAnchors];
+        });
+        setIsSelected(false);
+      })
+      .catch((err) => console.log(err));
+  };
+
+  const deactivate = ({ a_id }) => {
+    axios
+      .post(`http://localhost:9000/api/deactivate/anchors/${a_id}`)
+      .then((res) => {
+        refetch();
+        setToast({
+          ...toast,
+          type: "success",
+          message: "Anchor successfully deactivate",
+          show: true,
+        });
+        setTimeout(() => {
+          setToast({
+            ...toast,
+            type: "",
+            message: "",
+            show: false,
+          });
+        }, 3000);
+      })
+      .catch((err) => console.log(err));
+  };
+
+  const save = (anchorsList) => {
+    let body = anchorsList;
+    for (let i = 0; i < anchorsList.length; i++) {
+      if (anchorsList[i].a_id === null) {
+        console.log("nulllll");
+        setToast({
+          ...toast,
+          type: "error",
+          message: "Please select an anchor Id !",
+          show: true,
+        });
+        setTimeout(() => {
+          setToast({
+            ...toast,
+            type: "",
+            message: "",
+            show: false,
+          });
+        }, 3000);
+        return;
+      }
+    }
+    axios
+      .post("http://localhost:9000/api/anchors", body)
+      .then((res) => {
+        refetch();
+        setToast({
+          ...toast,
+          type: "success",
+          message: "Anchor successfully activated",
+          show: true,
+        });
+        setTimeout(() => {
+          setToast({
+            ...toast,
+            type: "",
+            message: "",
+            show: false,
+          });
+        }, 3000);
+      })
+      .catch((err) => console.log(err));
+  };
 
   useEffect(() => {
     axios
@@ -446,16 +578,19 @@ const App = () => {
       .then((res) => {
         console.log(res.data);
         if (!res.data[0]) return;
+        let id = 0;
         setAnchors((currentAnchors) => {
           res.data.map((anchor) =>
             currentAnchors.push({
-              id: anchor.id,
+              id: id++,
+              a_id: anchor.a_id,
               locations: anchor.locations,
               shape: anchor.shape,
               x: anchor.x,
               y: anchor.y,
               radius: anchor.range,
               site_id: anchor.site_id,
+              active_yn: anchor.Active_YN,
             })
           );
           return [...currentAnchors];
@@ -472,6 +607,9 @@ const App = () => {
 
   return (
     <>
+      {toast.show && (
+        <ToastContainer type={toast.type} message={toast.message} />
+      )}
       <ToolsBar>
         <button
           className="pts-toolsbar-btn"
@@ -482,13 +620,7 @@ const App = () => {
         <button
           className="pts-toolsbar-btn"
           onClick={() => {
-            let body = anchors;
-            console.log(anchors);
-            console.log("save");
-            axios
-              .post("http://localhost:9000/api/anchors", body)
-              .then((res) => console.log("sucess"))
-              .catch((err) => console.log(err));
+            save(anchors);
           }}
         >
           Save
@@ -513,6 +645,7 @@ const App = () => {
           width={window.innerWidth}
           height={window.innerHeight}
           ref={stageRef}
+          onDragStart={() => setIsVisible(false)}
           onDragEnd={(e) => {
             setStagePos({
               ...stagePos,
@@ -540,18 +673,20 @@ const App = () => {
                   point.y * scaleY,
                 ])}
                 onClick={(e) => console.log(e.target)}
+                lineJoin="round"
               />
             )}
             {anchors[0] &&
               anchors?.map((anchor, i) => (
                 <Line
                   key={i}
-                  stroke={Konva.Util.getRandomColor()}
+                  stroke="blue"
                   strokeWidth={5}
                   points={anchor.shape.flatMap((point) => [
                     point.x * scaleX,
                     point.y * scaleY,
                   ])}
+                  lineJoin="round"
                 />
               ))}
             {anchors[0] &&
@@ -563,7 +698,7 @@ const App = () => {
                       <Circle
                         x={anchorPos.x * scaleX}
                         y={anchorPos.y * scaleY}
-                        radius={anchorRange}
+                        radius={anchorPos.radius * scaleX}
                         fill="blue"
                         opacity={0.2}
                       />
@@ -582,6 +717,12 @@ const App = () => {
                     }}
                     onDragEnd={(e) => handleAnchorDrag({ e, anchorPos })}
                     onClick={(e) => handleAnchorClick(e, anchorPos)}
+                    onMouseOver={(e) => {
+                      !isSelected && handleAnchorMouseOver(e, anchorPos);
+                    }}
+                    onMouseOut={() => {
+                      setIsMouseOver(false);
+                    }}
                   />
                 </React.Fragment>
               ))}
@@ -599,8 +740,8 @@ const App = () => {
             {isMapping && (
               <PolygonConstructor
                 stage={{ ref: stageRef, pos: stagePos }}
-                width={window.innerWidth}
-                height={window.innerHeight}
+                width={2000}
+                height={2000}
                 isMultiple={false}
                 setPolygons={(polygon) => {
                   console.log(polygon);
@@ -613,69 +754,65 @@ const App = () => {
                   console.log("im saving shape");
                   setIsMapping(false);
                 }}
+                polygons={undefined}
+                scale={undefined}
               />
             )}
           </Layer>
-          {isSelected && (
+          {(isSelected || isMouseOver) && (
             <Layer x={tooltip?.x} y={tooltip?.y}>
               <Html>
                 <Popup className="sb-pts-popup">
-                  <PopupHeader className="sb-pts-popup-hdr" label="id:">
-                    <PopupItem
-                      type="select"
-                      options={anchorsIds}
-                      onChange={(newId) => {
-                        console.log(newId);
-                        handleAnchorChange({
-                          anchorId: tooltip.object.id,
-                          property: "id",
-                          value: newId,
-                        });
-                      }}
-                    />
+                  <PopupHeader
+                    className="sb-pts-popup-hdr"
+                    label={`Anchor Id:${
+                      tooltip.object.a_id !== null ? tooltip.object.a_id : ""
+                    }`}
+                  >
+                    {isSelected && tooltip.object.a_id === null && (
+                      <PopupItem
+                        type="select"
+                        value={tooltip?.object.a_id}
+                        options={anchorsIds}
+                        onChange={(newId) => {
+                          console.log(newId);
+                          handleAnchorChange({
+                            anchorId: tooltip.object.id,
+                            property: "id",
+                            value: newId,
+                          });
+                        }}
+                      />
+                    )}
+
+                    {tooltip.object.active_yn ? (
+                      <button
+                        style={{
+                          float: "right",
+                          borderRadius: "50%",
+                          backgroundColor: "green",
+                          color: "white",
+                        }}
+                        onClick={() =>
+                          deactivate({ a_id: tooltip.object.a_id })
+                        }
+                      >
+                        -
+                      </button>
+                    ) : (
+                      <button
+                        style={{
+                          float: "right",
+                          borderRadius: "50%",
+                          backgroundColor: "red",
+                          color: "white",
+                        }}
+                        onClick={() => save([tooltip.object])}
+                      >
+                        +
+                      </button>
+                    )}
                   </PopupHeader>
-                  <PopupBody className="sb-popup-body">
-                    <PopupItem
-                      type="select"
-                      label="Zone"
-                      options={zones.flatMap((zone) => [zone.zone])}
-                      text={tooltip?.object.zone}
-                      editable={true}
-                      onChange={(newZone) =>
-                        handleAnchorChange({
-                          anchorId: tooltip.object.id,
-                          property: "zone",
-                          value: newZone,
-                        })
-                      }
-                    />
-                    <PopupItem
-                      type="number"
-                      label="Tokens"
-                      value={tooltip?.object.tokens}
-                      editable={true}
-                      onChange={(newTokens) =>
-                        handleAnchorChange({
-                          anchorId: tooltip.object.id,
-                          property: "tokens",
-                          value: newTokens,
-                        })
-                      }
-                    />
-                    <PopupItem
-                      type="number"
-                      label="Teams"
-                      value={tooltip?.object.teams}
-                      editable={true}
-                      onChange={(newTeam) =>
-                        handleAnchorChange({
-                          anchorId: tooltip.object.id,
-                          property: "teams",
-                          value: newTeam,
-                        })
-                      }
-                    />
-                  </PopupBody>
                 </Popup>
               </Html>
             </Layer>

@@ -7,24 +7,24 @@ const ToolsBar = (props) => {
     height: 30,
     borderRadius: 50,
     border: "1px solid black 0.6",
-    boxShadow: "5px 5px 5px rgba(1 1 1/80%)",
-    backgroundColor: "red",
+    // boxShadow: "5px 5px 5px rgba(1 1 1/80%)",
+    backgroundColor: "orangered",
     padding: 1,
-    margin: "10px auto",
+    margin: "5px auto",
     cursor: "grab",
   };
   return (
     <div
       style={{
-        left: "95%",
+        left: "96%",
         top: 100,
-        width: 60,
-        height: 600,
-        backgroundColor: "rgba(50, 150, 198, 0.704)",
+        width: 55,
+        height: 800,
+        backgroundColor: "#3fcbc8",
         position: "fixed",
         display: "flex",
         flexDirection: "column",
-        boxShadow: "3px 3px 3px grey",
+        // boxShadow: "3px 3px 3px grey",
         borderRadius: 5,
         zIndex: 2,
       }}
@@ -43,8 +43,13 @@ const ToolsBar = (props) => {
         }}
         onMouseOut={(e) => (e.target.style.cursor = "grab")}
       />
-      <br></br>
-      {props.children}
+      <hr style={{ width: 40 }}></hr>
+      {props.children.map((child) => (
+        <>
+          {child}
+          <hr style={{ width: 40 }}></hr>
+        </>
+      ))}
     </div>
   );
 };
