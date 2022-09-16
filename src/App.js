@@ -1,229 +1,17 @@
 import axios from "axios";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Stage,
-  Layer,
-  Rect,
-  Circle,
-  Text,
-  Group,
-  Line,
-  Image,
-} from "react-konva";
-// import URLImage from "./components/Image";
+import { Stage, Layer, Rect, Circle, Group, Line } from "react-konva";
 import { Html } from "react-konva-utils";
 import Popup, { PopupBody, PopupHeader, PopupItem } from "./components/Popup";
 import ToolsBar from "./components/ToolsBar";
 import styles from "./styles.css";
-import { isInsideShape } from "./utils/isInside";
+import { generateLevels } from "./utils/generatelevels";
 import floorPlan from "./assets/PTS_Floor-Plan.png";
-import useImage from "use-image";
 import { PolygonConstructor } from "./lib/sb_Polygon_constructor/PolygonConstructor";
 import { ANCHOR_RADIUS, CELL_SIZE } from "./config/anchor.config";
 import Konva from "konva";
 import ToastContainer from "./components/ToastContainer";
-
-const generateLevels = ({
-  cellSize,
-  anchorPos,
-  shape,
-  scaleX,
-  scaleY,
-  anchorRange,
-}) => {
-  let arr = [];
-  let x0 = anchorPos.x * scaleX,
-    y0 = anchorPos.y * scaleY;
-  let radius = anchorRange;
-  let x = x0 - cellSize,
-    y = y0 - cellSize;
-  let level = 0;
-  let cellIndex = 0;
-
-  function interPolatePoints(point) {
-    let x = point.x,
-      y = point.y;
-    let points = [];
-
-    //top
-    for (let i = x; i < x + 2 * (x0 - x); i += cellSize) {
-      if (i <= x0) {
-        if (
-          checkIsPointInCircle(i, y) &&
-          isInsideShape(shape, { x: i / scaleX, y: y / scaleY })
-        ) {
-          points.push({
-            cellIndex: cellIndex++,
-            tokenId: "",
-            x: i / scaleX,
-            y: y / scaleY,
-            distance: Math.sqrt(Math.pow(x0 - i, 2) + Math.pow(y0 - y, 2)),
-          });
-        }
-      } else {
-        if (
-          checkIsPointInCircle(cellSize + i, y) &&
-          isInsideShape(shape, {
-            x: (cellSize + i) / scaleX,
-            y: y / scaleY,
-          })
-        ) {
-          points.push({
-            cellIndex: cellIndex++,
-            tokenId: "",
-            x: i / scaleX,
-            y: y / scaleY,
-            distance: Math.sqrt(
-              Math.pow(x0 - (cellSize + i), 2) + Math.pow(y0 - y, 2)
-            ),
-          });
-        }
-      }
-    }
-
-    //right
-    for (let i = y + cellSize; i < y + 2 * (y0 - y) - cellSize; i += cellSize) {
-      if (i <= y0) {
-        if (
-          checkIsPointInCircle(x + 2 * (x0 - x), i) &&
-          isInsideShape(shape, {
-            x: (x + 2 * (x0 - x)) / scaleX,
-            y: i / scaleY,
-          })
-        ) {
-          points.push({
-            cellIndex: cellIndex++,
-            tokenId: "",
-            x: (x + 2 * (x0 - x) - cellSize) / scaleX,
-            y: i / scaleY,
-            distance: Math.sqrt(
-              Math.pow(x0 - (x + cellSize), 2) + Math.pow(y0 - i, 2)
-            ),
-          });
-        }
-      } else {
-        if (
-          checkIsPointInCircle(x + 2 * (x0 - x), i + cellSize) &&
-          isInsideShape(shape, {
-            x: (x + 2 * (x0 - x)) / scaleX,
-            y: (i + cellSize) / scaleY,
-          })
-        ) {
-          points.push({
-            cellIndex: cellIndex++,
-            tokenId: "",
-            x: (x + 2 * (x0 - x) - cellSize) / scaleX,
-            y: i / scaleY,
-            distance: Math.sqrt(
-              Math.pow(x0 - x, 2) + Math.pow(y0 - (i + cellSize), 2)
-            ),
-          });
-        }
-      }
-    }
-
-    // //bottom
-    for (let i = x + 2 * (x0 - x) - cellSize; i >= x; i -= cellSize) {
-      if (i > x0) {
-        if (
-          checkIsPointInCircle(i + cellSize, y + 2 * (y0 - y)) &&
-          isInsideShape(shape, {
-            x: (i + cellSize) / scaleX,
-            y: (y + 2 * (y0 - y)) / scaleY,
-          })
-        ) {
-          points.push({
-            cellIndex: cellIndex++,
-            tokenId: "",
-            x: i / scaleX,
-            y: (y + 2 * (y0 - y) - cellSize) / scaleY,
-            distance: Math.sqrt(
-              Math.pow(x0 - i + cellSize, 2) + Math.pow(y0 - y, 2)
-            ),
-          });
-        }
-      } else {
-        if (
-          checkIsPointInCircle(i, y + 2 * (y0 - y)) &&
-          isInsideShape(shape, {
-            x: i / scaleX,
-            y: (y + 2 * (y0 - y)) / scaleY,
-          })
-        ) {
-          points.push({
-            cellIndex: cellIndex++,
-            tokenId: "",
-            x: i / scaleX,
-            y: (y + 2 * (y0 - y) - cellSize) / scaleY,
-            distance: Math.sqrt(
-              Math.pow(x0 - i, 2) + Math.pow(y0 - (y + 2 * (y0 - y)), 2)
-            ),
-          });
-        }
-      }
-    }
-
-    //left
-    for (
-      let i = y + 2 * (y0 - y) - 2 * cellSize;
-      i >= y + cellSize;
-      i -= cellSize
-    ) {
-      //check if point lies in circle or not
-      //if no decrement x b cell size
-      if (i <= y0) {
-        if (
-          checkIsPointInCircle(x, i) &&
-          isInsideShape(shape, { x: x / scaleX, y: i / scaleY })
-        ) {
-          points.push({
-            cellIndex: cellIndex++,
-            tokenId: "",
-            x: x / scaleX,
-            y: i / scaleY,
-            distance: Math.sqrt(Math.pow(x0 - x, 2) + Math.pow(y0 - i, 2)),
-          });
-        }
-      } else {
-        if (
-          checkIsPointInCircle(x, i + cellSize) &&
-          isInsideShape(shape, {
-            x: x / scaleX,
-            y: (i + cellSize) / scaleY,
-          })
-        ) {
-          points.push({
-            cellIndex: cellIndex++,
-            tokenId: "",
-            x: x / scaleX,
-            y: i / scaleY,
-            distance: Math.sqrt(
-              Math.pow(x0 - x, 2) + Math.pow(y0 - (i + cellSize), 2)
-            ),
-          });
-        }
-      }
-    }
-
-    return points.sort((a, b) => a.distance - b.distance);
-  }
-
-  function checkIsPointInCircle(a, b) {
-    return (
-      Math.sqrt(Math.pow(a - x0, 2) + Math.pow(b - y0, 2)) <=
-      Math.sqrt(Math.pow(radius, 2) + Math.pow(cellSize, 2))
-    );
-  }
-
-  while (x0 - x <= radius && y0 - y <= radius) {
-    arr[level] = interPolatePoints({ x: x, y: y });
-    x = x - cellSize;
-    y = y - cellSize;
-    level++;
-  }
-  console.log(arr);
-  return arr;
-};
+import URLImage from "./components/URLImage";
 
 const Grid = ({ cellSize, anchorPos, scaleX, scaleY }) => {
   return (
@@ -257,11 +45,6 @@ const Grid = ({ cellSize, anchorPos, scaleX, scaleY }) => {
   );
 };
 
-const URLImage = ({ image }) => {
-  const [img] = useImage(image.url);
-  return <Image image={img} width={image.width} height={image.height} />;
-};
-
 const App = () => {
   const [anchors, setAnchors] = useState([]);
   const [anchorsIds, setAnchorsIds] = useState([]);
@@ -286,7 +69,6 @@ const App = () => {
   const [zones, setZones] = useState([]);
 
   useMemo(() => {
-    console.log("scale changes");
     setCellSize((cellSize / prevScale.scaleX) * scaleX);
     setAnchorRange((anchorRange / prevScale.scaleX) * scaleX);
     setPrevScale({
@@ -381,7 +163,6 @@ const App = () => {
           newAnchors[i].id === anchorPos.id ||
           newAnchors[i].a_id === anchorPos.a_id
         ) {
-          console.log("set");
           newAnchors[i].x = e.target.attrs.x / scaleX;
           newAnchors[i].y = e.target.attrs.y / scaleY;
           let newAnchorPos = {
@@ -433,7 +214,6 @@ const App = () => {
 
   //listens when newAnchors is clicked
   const handleAnchorClick = (e, anchor) => {
-    console.log("abcd");
     // setIsMouseOver(false);
     setIsSelected(!isSelected);
     setTooltip({
@@ -472,11 +252,27 @@ const App = () => {
     });
   };
 
+  const throwToast = ({ type, message, show }) => {
+    setToast({
+      ...toast,
+      type: type,
+      message: message,
+      show: show,
+    });
+    setTimeout(() => {
+      setToast({
+        ...toast,
+        type: "",
+        message: "",
+        show: false,
+      });
+    }, 3000);
+  };
+
   const refetch = () => {
     axios
       .get("http://localhost:9000/api/1/anchors?Active_YN=Y")
       .then((res) => {
-        console.log(res.data);
         if (!res.data[0]) {
           setAnchors([...res.data]);
           setIsSelected(false);
@@ -501,6 +297,11 @@ const App = () => {
           return [...currentAnchors];
         });
         setIsSelected(false);
+        axios
+          .get("http://localhost:9000/api/1/anchors?Active_YN=N")
+          .then((res) => {
+            setAnchorsIds([...res.data.flatMap((anchor) => [anchor.a_id])]);
+          });
       })
       .catch((err) => console.log(err));
   };
@@ -510,20 +311,11 @@ const App = () => {
       .post(`http://localhost:9000/api/deactivate/anchors/${a_id}`)
       .then((res) => {
         refetch();
-        setToast({
-          ...toast,
+        throwToast({
           type: "success",
           message: "Anchor successfully deactivate",
           show: true,
         });
-        setTimeout(() => {
-          setToast({
-            ...toast,
-            type: "",
-            message: "",
-            show: false,
-          });
-        }, 3000);
       })
       .catch((err) => console.log(err));
   };
@@ -532,21 +324,11 @@ const App = () => {
     let body = anchorsList;
     for (let i = 0; i < anchorsList.length; i++) {
       if (anchorsList[i].a_id === null) {
-        console.log("nulllll");
-        setToast({
-          ...toast,
+        throwToast({
           type: "error",
           message: "Please select an anchor Id !",
           show: true,
         });
-        setTimeout(() => {
-          setToast({
-            ...toast,
-            type: "",
-            message: "",
-            show: false,
-          });
-        }, 3000);
         return;
       }
     }
@@ -554,20 +336,11 @@ const App = () => {
       .post("http://localhost:9000/api/anchors", body)
       .then((res) => {
         refetch();
-        setToast({
-          ...toast,
+        throwToast({
           type: "success",
           message: "Anchor successfully activated",
           show: true,
         });
-        setTimeout(() => {
-          setToast({
-            ...toast,
-            type: "",
-            message: "",
-            show: false,
-          });
-        }, 3000);
       })
       .catch((err) => console.log(err));
   };
@@ -576,7 +349,6 @@ const App = () => {
     axios
       .get("http://localhost:9000/api/1/anchors?Active_YN=Y")
       .then((res) => {
-        console.log(res.data);
         if (!res.data[0]) return;
         let id = 0;
         setAnchors((currentAnchors) => {
@@ -642,8 +414,8 @@ const App = () => {
       >
         <Stage
           draggable
-          width={window.innerWidth}
-          height={window.innerHeight}
+          width={10000}
+          height={10000}
           ref={stageRef}
           onDragStart={() => setIsVisible(false)}
           onDragEnd={(e) => {
@@ -654,12 +426,12 @@ const App = () => {
             });
           }}
         >
-          <Layer>
+          <Layer key={`layer1`}>
             <URLImage
               image={{
                 url: floorPlan,
-                width: window.innerWidth,
-                height: window.innerHeight,
+                width: 3840,
+                height: 2917,
               }}
             />
             {shape[0] && (
@@ -672,14 +444,13 @@ const App = () => {
                   point.x * scaleX,
                   point.y * scaleY,
                 ])}
-                onClick={(e) => console.log(e.target)}
                 lineJoin="round"
               />
             )}
             {anchors[0] &&
               anchors?.map((anchor, i) => (
                 <Line
-                  key={i}
+                  key={`room${i}`}
                   stroke="blue"
                   strokeWidth={5}
                   points={anchor.shape.flatMap((point) => [
@@ -740,8 +511,8 @@ const App = () => {
             {isMapping && (
               <PolygonConstructor
                 stage={{ ref: stageRef, pos: stagePos }}
-                width={2000}
-                height={2000}
+                width={10000}
+                height={10000}
                 isMultiple={false}
                 setPolygons={(polygon) => {
                   console.log(polygon);
@@ -751,16 +522,16 @@ const App = () => {
                     newShape.push({ x: point.x / scaleX, y: point.y / scaleY });
                   });
                   setShape([...newShape]);
-                  console.log("im saving shape");
                   setIsMapping(false);
                 }}
                 polygons={undefined}
-                scale={undefined}
+                scaleX={0.3}
+                scaleY={0.3}
               />
             )}
           </Layer>
           {(isSelected || isMouseOver) && (
-            <Layer x={tooltip?.x} y={tooltip?.y}>
+            <Layer key={`layer2`} x={tooltip?.x} y={tooltip?.y}>
               <Html>
                 <Popup className="sb-pts-popup">
                   <PopupHeader
@@ -775,7 +546,6 @@ const App = () => {
                         value={tooltip?.object.a_id}
                         options={anchorsIds}
                         onChange={(newId) => {
-                          console.log(newId);
                           handleAnchorChange({
                             anchorId: tooltip.object.id,
                             property: "id",

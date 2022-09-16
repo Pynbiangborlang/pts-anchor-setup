@@ -19,7 +19,7 @@ const ToolsBar = (props) => {
         left: "96%",
         top: 100,
         width: 55,
-        height: 800,
+        height: "80%",
         backgroundColor: "#3fcbc8",
         position: "fixed",
         display: "flex",
@@ -44,11 +44,11 @@ const ToolsBar = (props) => {
         onMouseOut={(e) => (e.target.style.cursor = "grab")}
       />
       <hr style={{ width: 40 }}></hr>
-      {props.children.map((child) => (
-        <>
+      {props.children.map((child, i) => (
+        <React.Fragment key={i}>
           {child}
           <hr style={{ width: 40 }}></hr>
-        </>
+        </React.Fragment>
       ))}
     </div>
   );

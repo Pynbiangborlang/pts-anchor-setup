@@ -199,6 +199,8 @@ export const PolygonConstructor = ({
   scale,
   setPolygons,
   isMultiple = true,
+  scaleX,
+  scaleY,
   ...props
 }) => {
   let newScale = scale ? scale : 1;
