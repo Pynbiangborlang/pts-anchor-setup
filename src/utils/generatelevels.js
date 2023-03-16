@@ -1,15 +1,8 @@
 import { isInsideShape } from "./isInside";
-const generateLevels = ({
-  cellSize,
-  anchorPos,
-  shape,
-  scaleX,
-  scaleY,
-  anchorRange,
-}) => {
+const generateLevels = ({ cellSize, anchorPos, shape, anchorRange }) => {
   let arr = [];
-  let x0 = anchorPos.x * scaleX,
-    y0 = anchorPos.y * scaleY;
+  let x0 = anchorPos.x,
+    y0 = anchorPos.y;
   let radius = anchorRange;
   let x = x0 - cellSize,
     y = y0 - cellSize;
@@ -26,13 +19,13 @@ const generateLevels = ({
       if (i <= x0) {
         if (
           checkIsPointInCircle(i, y) &&
-          isInsideShape(shape, { x: i / scaleX, y: y / scaleY })
+          isInsideShape(shape, { x: i, y: y })
         ) {
           points.push({
             cellIndex: cellIndex++,
             tokenId: "",
-            x: i / scaleX,
-            y: y / scaleY,
+            x: i,
+            y: y,
             distance: Math.sqrt(Math.pow(x0 - i, 2) + Math.pow(y0 - y, 2)),
           });
         }
@@ -40,15 +33,15 @@ const generateLevels = ({
         if (
           checkIsPointInCircle(cellSize + i, y) &&
           isInsideShape(shape, {
-            x: (cellSize + i) / scaleX,
-            y: y / scaleY,
+            x: cellSize + i,
+            y: y,
           })
         ) {
           points.push({
             cellIndex: cellIndex++,
             tokenId: "",
-            x: i / scaleX,
-            y: y / scaleY,
+            x: i,
+            y: y,
             distance: Math.sqrt(
               Math.pow(x0 - (cellSize + i), 2) + Math.pow(y0 - y, 2)
             ),
@@ -63,15 +56,15 @@ const generateLevels = ({
         if (
           checkIsPointInCircle(x + 2 * (x0 - x), i) &&
           isInsideShape(shape, {
-            x: (x + 2 * (x0 - x)) / scaleX,
-            y: i / scaleY,
+            x: x + 2 * (x0 - x),
+            y: i,
           })
         ) {
           points.push({
             cellIndex: cellIndex++,
             tokenId: "",
-            x: (x + 2 * (x0 - x) - cellSize) / scaleX,
-            y: i / scaleY,
+            x: x + 2 * (x0 - x) - cellSize,
+            y: i,
             distance: Math.sqrt(
               Math.pow(x0 - (x + cellSize), 2) + Math.pow(y0 - i, 2)
             ),
@@ -81,15 +74,15 @@ const generateLevels = ({
         if (
           checkIsPointInCircle(x + 2 * (x0 - x), i + cellSize) &&
           isInsideShape(shape, {
-            x: (x + 2 * (x0 - x)) / scaleX,
-            y: (i + cellSize) / scaleY,
+            x: x + 2 * (x0 - x),
+            y: i + cellSize,
           })
         ) {
           points.push({
             cellIndex: cellIndex++,
             tokenId: "",
-            x: (x + 2 * (x0 - x) - cellSize) / scaleX,
-            y: i / scaleY,
+            x: x + 2 * (x0 - x) - cellSize,
+            y: i,
             distance: Math.sqrt(
               Math.pow(x0 - x, 2) + Math.pow(y0 - (i + cellSize), 2)
             ),
@@ -98,21 +91,21 @@ const generateLevels = ({
       }
     }
 
-    // //bottom
+    ///bottom
     for (let i = x + 2 * (x0 - x) - cellSize; i >= x; i -= cellSize) {
       if (i > x0) {
         if (
           checkIsPointInCircle(i + cellSize, y + 2 * (y0 - y)) &&
           isInsideShape(shape, {
-            x: (i + cellSize) / scaleX,
-            y: (y + 2 * (y0 - y)) / scaleY,
+            x: i + cellSize,
+            y: y + 2 * (y0 - y),
           })
         ) {
           points.push({
             cellIndex: cellIndex++,
             tokenId: "",
-            x: i / scaleX,
-            y: (y + 2 * (y0 - y) - cellSize) / scaleY,
+            x: i,
+            y: y + 2 * (y0 - y) - cellSize,
             distance: Math.sqrt(
               Math.pow(x0 - i + cellSize, 2) + Math.pow(y0 - y, 2)
             ),
@@ -122,15 +115,15 @@ const generateLevels = ({
         if (
           checkIsPointInCircle(i, y + 2 * (y0 - y)) &&
           isInsideShape(shape, {
-            x: i / scaleX,
-            y: (y + 2 * (y0 - y)) / scaleY,
+            x: i,
+            y: y + 2 * (y0 - y),
           })
         ) {
           points.push({
             cellIndex: cellIndex++,
             tokenId: "",
-            x: i / scaleX,
-            y: (y + 2 * (y0 - y) - cellSize) / scaleY,
+            x: i,
+            y: y + 2 * (y0 - y) - cellSize,
             distance: Math.sqrt(
               Math.pow(x0 - i, 2) + Math.pow(y0 - (y + 2 * (y0 - y)), 2)
             ),
@@ -150,13 +143,13 @@ const generateLevels = ({
       if (i <= y0) {
         if (
           checkIsPointInCircle(x, i) &&
-          isInsideShape(shape, { x: x / scaleX, y: i / scaleY })
+          isInsideShape(shape, { x: x, y: i })
         ) {
           points.push({
             cellIndex: cellIndex++,
             tokenId: "",
-            x: x / scaleX,
-            y: i / scaleY,
+            x: x,
+            y: i,
             distance: Math.sqrt(Math.pow(x0 - x, 2) + Math.pow(y0 - i, 2)),
           });
         }
@@ -164,15 +157,15 @@ const generateLevels = ({
         if (
           checkIsPointInCircle(x, i + cellSize) &&
           isInsideShape(shape, {
-            x: x / scaleX,
-            y: (i + cellSize) / scaleY,
+            x: x,
+            y: i + cellSize,
           })
         ) {
           points.push({
             cellIndex: cellIndex++,
             tokenId: "",
-            x: x / scaleX,
-            y: i / scaleY,
+            x: x,
+            y: i,
             distance: Math.sqrt(
               Math.pow(x0 - x, 2) + Math.pow(y0 - (i + cellSize), 2)
             ),
@@ -180,7 +173,7 @@ const generateLevels = ({
         }
       }
     }
-
+    console.log(points, `level ${level}`);
     return points.sort((a, b) => a.distance - b.distance);
   }
 
@@ -192,11 +185,16 @@ const generateLevels = ({
   }
 
   while (x0 - x <= radius && y0 - y <= radius) {
-    arr[level] = interPolatePoints({ x: x, y: y });
+    let newLevels = interPolatePoints({ x: x, y: y });
+    if (!newLevels[0]) {
+      break;
+    }
+    arr[level] = newLevels;
     x = x - cellSize;
     y = y - cellSize;
     level++;
   }
+  console.log(arr);
   return arr;
 };
 

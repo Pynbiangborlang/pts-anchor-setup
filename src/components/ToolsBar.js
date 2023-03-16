@@ -17,7 +17,7 @@ const ToolsBar = (props) => {
     <div
       style={{
         left: "96%",
-        top: 100,
+        top: 150,
         width: 55,
         height: "80%",
         backgroundColor: "#3fcbc8",

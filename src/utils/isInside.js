@@ -7,6 +7,7 @@ const onSegment = (p, q, r) => {
     q.y <= Math.max(p.y, r.y) &&
     q.y >= Math.min(p.y, r.y)
   ) {
+    console.log(true);
     return true;
   }
   return false;

@@ -132,7 +132,7 @@ const Anchors = ({ polygon, id, callBack }) => {
           />
         );
       })}
-      {isDrag && <Line stroke="blue" points={path} strokeWidth={2} />}
+      {isDrag && <Line stroke="blue" points={path} strokeWidth={2} bezier />}
     </Group>
   );
 };
@@ -196,14 +196,12 @@ export const PolygonConstructor = ({
   width,
   height,
   polygons,
-  scale,
   setPolygons,
   isMultiple = true,
   scaleX,
   scaleY,
   ...props
 }) => {
-  let newScale = scale ? scale : 1;
   const [history, setHistory] = useState({
     points: [],
     lastPosition: {},
@@ -228,7 +226,7 @@ export const PolygonConstructor = ({
   const onCreatePoint = (e) => {
     if (isComplete) return;
 
-    // let mousePos = rectRef.current.getStage().getPointersPositions()[0];
+    let mousePos = rectRef.current.getStage().getPointersPositions()[0];
     let offsetX = e.evt.offsetX;
     let offsetY = e.evt.offsetY;
     setPoints((currentPoints) => {
@@ -249,14 +247,17 @@ export const PolygonConstructor = ({
       setHistory({
         ...history,
         lastPosition: {
-          x: offsetX - stage.pos.x,
-          y: offsetY - stage.pos.y,
+          x: (offsetX - stage.pos.x) / scaleX,
+          y: (offsetY - stage.pos.y) / scaleY,
         },
       });
       return;
     }
     setnextPoint((currentNextPoints) => {
-      currentNextPoints = [offsetX - stage.pos.x, offsetY - stage.pos.y];
+      currentNextPoints = [
+        (offsetX - stage.pos.x) / scaleX,
+        (offsetY - stage.pos.y) / scaleY,
+      ];
       return [...currentNextPoints];
     });
   };
@@ -271,8 +272,8 @@ export const PolygonConstructor = ({
             id: Date.now(),
             points: points.concat({
               id: Date.now(),
-              x: e.target.attrs.x,
-              y: e.target.attrs.y,
+              x: e.target.attrs.x * scaleX,
+              y: e.target.attrs.y * scaleY,
             }),
           },
         ])
@@ -281,8 +282,8 @@ export const PolygonConstructor = ({
             id: Date.now(),
             points: points.concat({
               id: Date.now(),
-              x: e.target.attrs.x,
-              y: e.target.attrs.y,
+              x: e.target.attrs.x * scaleX,
+              y: e.target.attrs.y * scaleY,
             }),
           },
         ]);
@@ -404,9 +405,11 @@ export const PolygonConstructor = ({
     <>
       <Line
         opacity={1}
-        points={points.flatMap((point) => [point.x, point.y]).concat(nextPoint)}
+        points={points
+          .flatMap((point) => [point.x / scaleX, point.y / scaleY])
+          .concat(nextPoint)}
         stroke="#df4b26"
-        strokeWidth={2}
+        strokeWidth={10}
         tension={0}
         lineCap="round"
         lineJoin="round"
@@ -416,10 +419,10 @@ export const PolygonConstructor = ({
       {points.map((point, i) => (
         <Circle
           key={i}
-          x={point.x}
-          y={point.y}
+          x={point.x / scaleX}
+          y={point.y / scaleY}
           fill="white"
-          radius={2}
+          radius={2 / scaleX}
           stroke="black"
           strokeWidth={3}
         />
@@ -478,9 +481,9 @@ export const PolygonConstructor = ({
       )}
       {points[0] && !isComplete && (
         <Circle
-          x={points[0].x}
-          y={points[0].y}
-          radius={10}
+          x={points[0].x / scaleX}
+          y={points[0].y / scaleY}
+          radius={20}
           stroke="black"
           onClick={onCompleteShape}
           onMouseOver={(e) => e.target.setFill("green")}

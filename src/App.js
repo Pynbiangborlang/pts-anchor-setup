@@ -26,12 +26,12 @@ const Grid = ({ cellSize, anchorPos, scaleX, scaleY }) => {
               return (
                 <React.Fragment key={`rect${anchorPos.id}_${i}_${j}`}>
                   <Rect
-                    x={cell.x * scaleX}
-                    y={cell.y * scaleY}
+                    x={cell.x}
+                    y={cell.y}
                     width={cellSize}
                     height={cellSize}
                     stroke="black"
-                    strokeWidth={0.5}
+                    strokeWidth={5}
                     fill="yellow"
                     opacity={0.3}
                   />
@@ -55,28 +55,14 @@ const App = () => {
   const [isMapping, setIsMapping] = useState(false);
   const [isSelected, setIsSelected] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
-  const [prevScale, setPrevScale] = useState({
-    scaleX: window.innerWidth / 100,
-    scaleY: window.innerHeight / 100,
-  });
   const [shape, setShape] = useState([]);
   const stageRef = useRef(null);
   const [stagePos, setStagePos] = useState({ x: 0, y: 0 });
-  const scaleX = window.innerWidth / 100;
-  const scaleY = window.innerHeight / 100;
+  const scaleX = 0.3;
+  const scaleY = 0.3;
   const [toast, setToast] = useState({ type: "", message: "", show: false });
   const [tooltip, setTooltip] = useState({});
   const [zones, setZones] = useState([]);
-
-  useMemo(() => {
-    setCellSize((cellSize / prevScale.scaleX) * scaleX);
-    setAnchorRange((anchorRange / prevScale.scaleX) * scaleX);
-    setPrevScale({
-      ...prevScale,
-      scaleX: window.innerWidth / 100,
-      scaleY: window.innerHeight / 100,
-    });
-  }, [scaleX, scaleY]);
 
   //listens when anchor is dropped in canvas
   const handleDrop = (e) => {
@@ -98,17 +84,15 @@ const App = () => {
       let shape = [];
       //cache the points of the room
       for (let i = 0; i < points.length; i += 2) {
-        shape.push({ x: points[i] / scaleX, y: points[i + 1] / scaleY });
+        shape.push({ x: points[i], y: points[i + 1] });
       }
       anchorPos.shape = shape;
       anchorPos.locations = [
         ...generateLevels({
-          cellSize,
+          cellSize: cellSize / scaleX,
           anchorPos,
           shape,
-          scaleX,
-          scaleY,
-          anchorRange,
+          anchorRange: anchorRange / scaleX,
         }),
       ];
 
@@ -127,21 +111,34 @@ const App = () => {
         shape: [],
       };
       let shape = [
-        { x: (x - ANCHOR_RADIUS) / scaleX, y: (y - ANCHOR_RADIUS) / scaleY },
-        { x: (x + ANCHOR_RADIUS) / scaleX, y: (y - ANCHOR_RADIUS) / scaleY },
-        { x: (x + ANCHOR_RADIUS) / scaleX, y: (y + ANCHOR_RADIUS) / scaleY },
-        { x: (x - ANCHOR_RADIUS) / scaleX, y: (y + ANCHOR_RADIUS) / scaleY },
-        { x: (x - ANCHOR_RADIUS) / scaleX, y: (y - ANCHOR_RADIUS) / scaleY },
+        {
+          x: (x - stagePos.x - ANCHOR_RADIUS) / scaleX,
+          y: (y - stagePos.y - ANCHOR_RADIUS) / scaleY,
+        },
+        {
+          x: (x - stagePos.x + ANCHOR_RADIUS) / scaleX,
+          y: (y - stagePos.y - ANCHOR_RADIUS) / scaleY,
+        },
+        {
+          x: (x - stagePos.x + ANCHOR_RADIUS) / scaleX,
+          y: (y - stagePos.y + ANCHOR_RADIUS) / scaleY,
+        },
+        {
+          x: (x - stagePos.x - ANCHOR_RADIUS) / scaleX,
+          y: (y - stagePos.y + ANCHOR_RADIUS) / scaleY,
+        },
+        {
+          x: (x - stagePos.x - ANCHOR_RADIUS) / scaleX,
+          y: (y - stagePos.y - ANCHOR_RADIUS) / scaleY,
+        },
       ];
       // anchorPos.shape = shape;s
       anchorPos.locations = [
         ...generateLevels({
-          cellSize,
+          cellSize: cellSize / scaleX,
           anchorPos,
           shape,
-          scaleX,
-          scaleY,
-          anchorRange,
+          anchorRange: anchorRange / scaleX,
         }),
       ];
       setAnchors((anchors) => {
@@ -163,47 +160,45 @@ const App = () => {
           newAnchors[i].id === anchorPos.id ||
           newAnchors[i].a_id === anchorPos.a_id
         ) {
-          newAnchors[i].x = e.target.attrs.x / scaleX;
-          newAnchors[i].y = e.target.attrs.y / scaleY;
+          newAnchors[i].x = e.target.attrs.x;
+          newAnchors[i].y = e.target.attrs.y;
           let newAnchorPos = {
             id: newAnchors[i]?.id,
             a_id: newAnchors[i].a_id,
-            x: e.target.attrs.x / scaleX,
-            y: e.target.attrs.y / scaleY,
+            x: e.target.attrs.x,
+            y: e.target.attrs.y,
             radius: ANCHOR_RADIUS / scaleX,
           };
           let x = e.target.attrs.x;
           let y = e.target.attrs.y;
           newAnchors[i].locations = generateLevels({
-            cellSize,
+            cellSize: cellSize / scaleX,
             anchorPos: newAnchorPos,
             shape: newAnchors[i].shape[0]
               ? newAnchors[i].shape
               : [
                   {
-                    x: (x - ANCHOR_RADIUS) / scaleX,
-                    y: (y - ANCHOR_RADIUS) / scaleY,
+                    x: x - ANCHOR_RADIUS / scaleX,
+                    y: y - ANCHOR_RADIUS / scaleY,
                   },
                   {
-                    x: (x + ANCHOR_RADIUS) / scaleX,
-                    y: (y - ANCHOR_RADIUS) / scaleY,
+                    x: x + ANCHOR_RADIUS / scaleX,
+                    y: y - ANCHOR_RADIUS / scaleY,
                   },
                   {
-                    x: (x + ANCHOR_RADIUS) / scaleX,
-                    y: (y + ANCHOR_RADIUS) / scaleY,
+                    x: x + ANCHOR_RADIUS / scaleX,
+                    y: y + ANCHOR_RADIUS / scaleY,
                   },
                   {
-                    x: (x - ANCHOR_RADIUS) / scaleX,
-                    y: (y + ANCHOR_RADIUS) / scaleY,
+                    x: x - ANCHOR_RADIUS / scaleX,
+                    y: y + ANCHOR_RADIUS / scaleY,
                   },
                   {
-                    x: (x - ANCHOR_RADIUS) / scaleX,
-                    y: (y - ANCHOR_RADIUS) / scaleY,
+                    x: x - ANCHOR_RADIUS / scaleX,
+                    y: y - ANCHOR_RADIUS / scaleY,
                   },
                 ],
-            scaleX,
-            scaleY,
-            anchorRange,
+            anchorRange: anchorRange / scaleX,
           });
           break;
         }
@@ -407,6 +402,7 @@ const App = () => {
         </button>
       </ToolsBar>
       <div
+        className="pts-config-canvas-container"
         onDrop={handleDrop}
         onDragOver={(e) => {
           e.preventDefault();
@@ -414,9 +410,11 @@ const App = () => {
       >
         <Stage
           draggable
-          width={10000}
-          height={10000}
+          width={5000}
+          height={5000}
           ref={stageRef}
+          scaleX={0.3}
+          scaleY={0.3}
           onDragStart={() => setIsVisible(false)}
           onDragEnd={(e) => {
             setStagePos({
@@ -441,8 +439,8 @@ const App = () => {
                 offsetX={0}
                 closed
                 points={shape.flatMap((point) => [
-                  point.x * scaleX,
-                  point.y * scaleY,
+                  point.x / scaleX,
+                  point.y / scaleY,
                 ])}
                 lineJoin="round"
               />
@@ -453,10 +451,7 @@ const App = () => {
                   key={`room${i}`}
                   stroke="blue"
                   strokeWidth={5}
-                  points={anchor.shape.flatMap((point) => [
-                    point.x * scaleX,
-                    point.y * scaleY,
-                  ])}
+                  points={anchor.shape.flatMap((point) => [point.x, point.y])}
                   lineJoin="round"
                 />
               ))}
@@ -467,18 +462,18 @@ const App = () => {
                     // the radius coverage of the anchor
                     !anchorPos.shape[0] && (
                       <Circle
-                        x={anchorPos.x * scaleX}
-                        y={anchorPos.y * scaleY}
-                        radius={anchorPos.radius * scaleX}
+                        x={anchorPos.x}
+                        y={anchorPos.y}
+                        radius={anchorPos.radius}
                         fill="blue"
                         opacity={0.2}
                       />
                     )}
                   {/* representing anchor in canvas */}
                   <Circle
-                    x={anchorPos.x * scaleX}
-                    y={anchorPos.y * scaleY}
-                    radius={10}
+                    x={anchorPos.x}
+                    y={anchorPos.y}
+                    radius={10 / scaleX}
                     fill="red"
                     opacity={0.7}
                     draggable
@@ -502,7 +497,7 @@ const App = () => {
               anchors.map((anchor) => (
                 <Grid
                   key={anchor.id}
-                  cellSize={cellSize}
+                  cellSize={cellSize / scaleX}
                   anchorPos={anchor}
                   scaleX={scaleX}
                   scaleY={scaleY}
@@ -511,27 +506,32 @@ const App = () => {
             {isMapping && (
               <PolygonConstructor
                 stage={{ ref: stageRef, pos: stagePos }}
-                width={10000}
-                height={10000}
+                width={5000}
+                height={5000}
                 isMultiple={false}
                 setPolygons={(polygon) => {
-                  console.log(polygon);
                   if (!polygon[0]) return;
                   let newShape = [];
                   polygon[0]?.points.forEach((point) => {
-                    newShape.push({ x: point.x / scaleX, y: point.y / scaleY });
+                    newShape.push({ x: point.x, y: point.y });
                   });
                   setShape([...newShape]);
                   setIsMapping(false);
                 }}
                 polygons={undefined}
-                scaleX={0.3}
-                scaleY={0.3}
+                scaleX={scaleX}
+                scaleY={scaleY}
               />
             )}
           </Layer>
           {(isSelected || isMouseOver) && (
-            <Layer key={`layer2`} x={tooltip?.x} y={tooltip?.y}>
+            <Layer
+              scaleX={1 / scaleX}
+              scaleY={1 / scaleY}
+              key={`layer2`}
+              x={tooltip?.x}
+              y={tooltip?.y}
+            >
               <Html>
                 <Popup className="sb-pts-popup">
                   <PopupHeader
