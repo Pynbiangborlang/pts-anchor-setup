@@ -10,9 +10,15 @@ module.exports = {
   devServer: {
     port: 3001,
     historyApiFallback: true,
+    hot: true,
   },
   module: {
     rules: [
+      {
+        test: /\.jsx?$/,
+        exclude: /node_modules/,
+        use: ["babel-loader"],
+      },
       {
         test: /\.m?js$/i,
         exclude: /node_modules/,
@@ -31,6 +37,17 @@ module.exports = {
       {
         test: /\.(png|jpg|gif)$/i,
         type: "asset/resource",
+      },
+      {
+        test: /\.svg$/i,
+        type: "asset",
+        resourceQuery: /url/, // *.svg?url
+      },
+      {
+        test: /\.svg$/i,
+        issuer: /\.[jt]sx?$/,
+        resourceQuery: { not: [/url/] }, // exclude react component if *.svg?url
+        use: ["@svgr/webpack"],
       },
     ],
   },

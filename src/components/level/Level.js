@@ -1,10 +1,10 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useState } from "react";
 import Konva from "konva";
+import axios from "axios";
 import { Stage, Layer, Line, Circle, Image } from "react-konva";
-import floorPlan from "../../assets/PTS_Floor-Plan.png";
 import useImage from "use-image";
 import token from "../../assets/token.svg";
-import axios from "axios";
+import floorPlan from "../../assets/PTS_Floor-Plan.png";
 
 const URLImage = ({ x = 0, y = 0, image }) => {
   const [img] = useImage(image.url);
@@ -19,9 +19,11 @@ const Level = () => {
   const [scaleX, setScaleX] = useState(0.3);
   const [scaleY, setScaleY] = useState(0.3);
 
+  console.log(tokens);
+
   const updateTokens = ({ tokenId, a_id, cell_index }) => {};
 
-  const data = useMemo(() => {
+  useLayoutEffect(() => {
     setAnchors((currentAnchors) => {
       let i = 0;
       let count = 0;
@@ -29,14 +31,14 @@ const Level = () => {
       while (i < tokens.length) {
         count = 0;
         for (let j = 0; j < currentAnchors.length; j++) {
-          if (tokens[i].anchorId === currentAnchors[j].a_id) {
+          if (tokens[i].anchor_id === currentAnchors[j].a_id) {
             let locations = currentAnchors[j].locations;
 
             for (let k = 1; k < locations.length; k++) {
               let m = 0;
               while (m < locations[k].length) {
                 if (locations[k][m].tokenId === "") {
-                  locations[k][m].tokenId = tokens[i].tokenId;
+                  locations[k][m].tokenId = tokens[i].token_id;
                   count++;
                   i++;
                   break;
@@ -59,16 +61,22 @@ const Level = () => {
       }
       return [...currentAnchors];
     });
-    return [...anchors];
   }, [tokens]);
+
   useEffect(() => {
-    axios.get("http://localhost:9000/api/1/anchors?Active_YN=Y").then((res) => {
-      setAnchors([...res.data]);
-    });
-    axios.get("http://localhost:9000/api/tokens").then((res) => {
-      setTokens([...res.data]);
-    });
+    setInterval(() => {
+      axios
+        .get("http://localhost:3000/api/v1/anchors?Active_YN=Y")
+        .then((res) => {
+          setAnchors([...res.data]);
+        });
+      axios.get("http://localhost:3000/api/v1/tokens").then((res) => {
+        setTokens([...res.data]);
+      });
+    }, 2000);
   }, []);
+
+  console.log(anchors);
 
   return (
     <>
@@ -114,14 +122,12 @@ const Level = () => {
                 level.map(
                   (point) =>
                     point.tokenId !== "" && (
-                      <URLImage
+                      <Circle
+                        key={point.id}
                         x={point.x}
                         y={point.y}
-                        image={{
-                          url: token,
-                          width: 10 / scaleX,
-                          height: 10 / scaleX,
-                        }}
+                        radius={4 / scaleX}
+                        fill="red"
                       />
                     )
                 )
